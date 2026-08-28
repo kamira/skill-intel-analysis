@@ -1,0 +1,46 @@
+name: pages
+# CHG-20260828-02:把 site/ 發佈到 GitHub Pages。
+# 站台是靜態單頁 + 一支資料檔,沒有建置步驟——直接上傳 site/ 即可。
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時只跑一個部署;排隊中的舊 run 直接取消,但不中斷進行中的那一個。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 公開範圍的機械閘:資料檔若出現任何一個已具名排除的欄位就擋下。
+      # 這道閘防的是「以後有人重新匯出時把整張表倒進來」。
+      # 全文比對,不做註解豁免——豁免等於留一條「寫在註解裡就過」的後門。
+      # 代價是 data.js 的檔頭不能字面列出這五個名字,該處已註明原因。
+      - name: public scope guard
+        run: |
+          if grep -nE '(觸發指標|版本說明|校準備註|對應情境|來源分析)' site/data.js; then
+            echo "::error::site/data.js 含有 CHG-20260828-02 具名排除的欄位"
+            exit 1
+          fi
+          echo "公開範圍檢查通過"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

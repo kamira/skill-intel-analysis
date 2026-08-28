@@ -1,0 +1,1183 @@
+<title>情報分析工作台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
+
+<style>
+/* ── 單一視覺世界:戰情室儀表面板。深色是設計選擇,不是省略;所有顏色明寫。 ── */
+:root{
+  --ink:#0B1114;
+  --panel:#121A1E;
+  --panel-2:#161F24;
+  --raise:#1B262B;
+  --line:#1F2C31;
+  --line-soft:#182226;
+  --text:#E2EAE7;
+  --muted:#8FA1A3;
+  --faint:#63767A;
+  --accent:#7FA8C4;
+  --accent-dim:#2B4051;
+  --brass:#C9A45C;
+
+  --s-active:#7FA8C4;
+  --s-observing:#9DB37C;
+  --s-dormant:#6E7C82;
+  --s-verified:#5FB59A;
+  --s-invalid:#C4675E;
+
+  --h0:#1B1F2A; --h1:#4A2C5A; --h2:#8E3B54; --h3:#C75A3F; --h4:#E89B3C; --h5:#F7D46B;
+
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --serif:"Noto Serif TC","Songti TC",serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ink);color:var(--text);
+  font-family:var(--sans);font-size:14px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+
+.app{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
+
+/* ── 左側導覽軌 ── */
+.rail{background:#080D0F;border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:22px 18px 18px;border-bottom:1px solid var(--line)}
+.brand h1{margin:0;font-family:var(--serif);font-weight:700;font-size:17px;letter-spacing:.06em;line-height:1.35}
+.brand .sub{margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+.nav{padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.nav button{display:block;width:100%;text-align:left;padding:10px 12px;border-left:2px solid transparent;color:var(--muted);transition:color .12s,background .12s}
+.nav button .zh{display:block;font-size:13.5px;font-weight:500;letter-spacing:.02em}
+.nav button .en{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-top:2px}
+.nav button:hover{color:var(--text);background:#0D1417}
+.nav button[aria-current="true"]{color:var(--text);background:#101A1F;border-left-color:var(--accent)}
+.nav button[aria-current="true"] .en{color:var(--accent)}
+.rail-foot{margin-top:auto;padding:14px 18px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;line-height:1.9;color:var(--faint)}
+.rail-foot b{color:var(--muted);font-weight:500}
+
+/* ── 頂列 ── */
+.topbar{display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid var(--line);background:#0A1013;position:sticky;top:0;z-index:20}
+.topbar h2{margin:0;font-family:var(--serif);font-size:16px;font-weight:600;letter-spacing:.04em}
+.topbar .meta{margin-left:auto;display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
+.topbar .meta b{color:var(--muted);font-weight:500}
+.mockflag{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:#0B1114;background:var(--brass);padding:3px 8px;border-radius:2px;font-weight:600}
+
+.view{display:none;padding:26px 28px 64px}
+.view.on{display:block}
+.wrap{max-width:1440px;margin:0 auto}
+
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin:0 0 10px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:3px}
+.panel-h{display:flex;align-items:baseline;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-soft)}
+.panel-h h3{margin:0;font-family:var(--serif);font-size:14.5px;font-weight:600;letter-spacing:.05em}
+.panel-h .note{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.08em;margin-left:auto}
+
+/* ── KPI 方塊矩陣 ── */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:22px}
+.kpi{background:var(--panel);padding:16px 18px 18px;min-height:118px;display:flex;flex-direction:column}
+.kpi .lab{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+.kpi .val{font-family:var(--mono);font-size:30px;font-weight:600;letter-spacing:-.01em;line-height:1.25;margin-top:8px;font-variant-numeric:tabular-nums}
+.kpi .val small{font-size:13px;font-weight:400;color:var(--muted);margin-left:4px;letter-spacing:.04em}
+.kpi .sub{margin-top:auto;padding-top:8px;font-size:11.5px;color:var(--muted);line-height:1.5}
+.kpi .sub em{font-style:normal;font-family:var(--mono);color:var(--text)}
+.kpi.hi .val{color:var(--h5)}
+.kpi.warn .val{color:var(--h4)}
+
+/* ── 地圖 ── */
+.mapgrid{display:grid;grid-template-columns:minmax(0,1fr) 306px;gap:18px;margin-bottom:22px}
+.mapbox{position:relative;padding:10px 10px 0}
+#worldmap{display:block;width:100%;height:auto}
+.maplegend{display:flex;align-items:center;gap:14px;padding:12px 8px 14px;border-top:1px solid var(--line-soft);margin-top:8px}
+.ramp{height:8px;flex:1;border-radius:1px;background:linear-gradient(90deg,var(--h0),var(--h1),var(--h2),var(--h3),var(--h4),var(--h5))}
+.legend-lab{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint);white-space:nowrap}
+.tip{position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-114%);background:#05090B;border:1px solid var(--line);border-radius:2px;padding:8px 11px;min-width:132px;transition:opacity .1s;z-index:5}
+.tip.on{opacity:1}
+.tip .n{font-size:12.5px;font-weight:500}
+.tip .d{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.05em}
+
+.rankrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--line-soft)}
+.rankrow:last-child{border-bottom:none}
+.rankrow .rk{font-family:var(--mono);font-size:10px;color:var(--faint);width:16px;font-variant-numeric:tabular-nums}
+.rankrow .nm{font-size:12.5px;width:78px;flex:none}
+.rankrow .br{flex:1;height:6px;background:#0D1518;border-radius:1px;overflow:hidden}
+.rankrow .br i{display:block;height:100%}
+.rankrow .ct{font-family:var(--mono);font-size:11.5px;color:var(--muted);width:22px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── 表格 ── */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;text-align:left;font-weight:500;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tbody tr{cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--panel-2)}
+tbody tr:last-child td{border-bottom:none}
+.cid{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.03em;white-space:nowrap}
+.cname{font-size:13.5px;font-weight:500}
+.ctags{margin-top:3px;font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.06em}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+.lenbar{width:104px;height:5px;background:#0D1518;border-radius:1px;overflow:hidden;margin-top:5px}
+.lenbar i{display:block;height:100%;background:var(--accent-dim)}
+.prob{font-family:var(--mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.word{font-size:11.5px;color:var(--muted);margin-top:1px}
+
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;padding:3px 9px;border-radius:2px;white-space:nowrap;border:1px solid}
+.chip::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.chip.active{color:var(--s-active);border-color:#26414F;background:#0F1A20}
+.chip.observing{color:var(--s-observing);border-color:#33402A;background:#131A11}
+.chip.dormant{color:var(--s-dormant);border-color:#2A3438;background:#111719}
+.chip.verified{color:var(--s-verified);border-color:#23453C;background:#0E1A17}
+.chip.invalidated{color:var(--s-invalid);border-color:#4A2A26;background:#1A1110}
+
+/* ── 篩選列 ── */
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line-soft)}
+.fgroup{display:flex;align-items:center;gap:6px}
+.fgroup>span{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;margin-right:2px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.05em;padding:5px 11px;border:1px solid var(--line);border-radius:2px;color:var(--muted);background:#0E1518;transition:all .12s}
+.pill:hover{color:var(--text);border-color:#2C3D44}
+.pill[aria-pressed="true"]{color:var(--ink);background:var(--accent);border-color:var(--accent);font-weight:600}
+.search{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:2px;padding:5px 10px;background:#0E1518}
+.search input{background:none;border:none;color:var(--text);font-family:var(--sans);font-size:12.5px;width:190px}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{outline:none}
+.fcount{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.08em;padding:0 18px 12px}
+
+/* ── 事件鍊細節 ── */
+.back{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);margin-bottom:16px}
+.back:hover{color:var(--accent)}
+.dhead{border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:22px 24px;margin-bottom:18px}
+.dhead .cid{font-size:11.5px}
+.dhead h3{margin:8px 0 0;font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:.03em;text-wrap:balance}
+.dfacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;margin-top:20px;overflow:hidden}
+.dfact{background:var(--panel-2);padding:11px 14px}
+.dfact .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.dfact .v{font-family:var(--mono);font-size:14px;margin-top:5px;font-variant-numeric:tabular-nums}
+.dcols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+@media (max-width:1180px){.dcols,.mapgrid{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,1fr)}}
+
+.timeline{padding:20px 24px 24px}
+.tl{position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--line)}
+.tlitem{position:relative;padding-bottom:20px}
+.tlitem:last-child{padding-bottom:0}
+.tlitem::before{content:"";position:absolute;left:-24px;top:6px;width:9px;height:9px;border-radius:50%;border:2px solid var(--panel);background:var(--faint)}
+.tlitem[data-k="訊號"]::before{background:var(--accent)}
+.tlitem[data-k="快照"]::before{background:var(--h4)}
+.tlitem[data-k="處置"]::before{background:var(--s-dormant)}
+.tlitem[data-k="結案"]::before{background:var(--s-verified)}
+.tlitem .when{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--faint)}
+.tlitem .when b{color:var(--muted);font-weight:500;margin-left:8px}
+.tlitem .what{margin-top:4px;font-size:13.5px;line-height:1.7}
+.tlitem .delta{display:inline-block;font-family:var(--mono);font-size:11px;margin-left:8px;padding:1px 7px;border-radius:2px;background:#16232A;color:var(--accent)}
+
+.vcard{padding:14px 18px;border-bottom:1px solid var(--line-soft)}
+.vcard:last-child{border-bottom:none}
+.vcard.latest{background:#141F24;border-left:2px solid var(--h4)}
+.vrow{display:flex;align-items:baseline;gap:10px}
+.vrow .vid{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.vrow .vp{margin-left:auto;font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.vstat{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;padding:2px 7px;border-radius:2px;border:1px solid var(--line);color:var(--faint)}
+.vstat.latest{color:var(--h4);border-color:#4A3A22}
+.vnote{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.65}
+
+.lists{padding:18px 22px}
+.lists h4{margin:0 0 8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;font-weight:500}
+.lists ul{margin:0 0 18px;padding-left:16px}
+.lists ul:last-of-type{margin-bottom:0}
+.lists li{font-size:13px;line-height:1.75;margin-bottom:3px}
+.lists li::marker{color:var(--faint)}
+
+/* ── 國家利益 ── */
+.cgrid{display:grid;grid-template-columns:206px minmax(0,1fr);gap:18px;align-items:start}
+.clist button{display:block;width:100%;text-align:left;padding:12px 16px;border-bottom:1px solid var(--line-soft);color:var(--muted);transition:all .12s}
+.clist button:last-child{border-bottom:none}
+.clist button .cn{font-size:13.5px;font-weight:500}
+.clist button .cm{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--faint);margin-top:2px}
+.clist button:hover{background:var(--panel-2);color:var(--text)}
+.clist button[aria-pressed="true"]{background:#101A20;color:var(--text);box-shadow:inset 2px 0 0 var(--accent)}
+.cbody{padding:24px 26px}
+.cbody h3{margin:0;font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:.04em}
+.cbody .role{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-top:6px}
+.csec{margin-top:26px;padding-top:20px;border-top:1px solid var(--line-soft)}
+.csec>h4{margin:0 0 12px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--brass);text-transform:uppercase;font-weight:500}
+.csec p,.csec li{font-size:13.5px;line-height:1.8;max-width:64ch}
+.csec p{margin:0 0 8px}
+.ordered{counter-reset:pri;list-style:none;padding:0;margin:0}
+.ordered li{counter-increment:pri;position:relative;padding-left:32px;margin-bottom:8px}
+.ordered li::before{content:counter(pri);position:absolute;left:0;top:2px;font-family:var(--mono);font-size:10.5px;color:var(--brass);border:1px solid #3E3320;width:20px;height:20px;display:grid;place-items:center;border-radius:2px}
+.redline{list-style:none;padding:0;margin:0}
+.redline li{position:relative;padding-left:18px;margin-bottom:7px;color:#E8CFC9}
+.redline li::before{content:"";position:absolute;left:0;top:10px;width:9px;height:2px;background:var(--s-invalid)}
+.linkchips{display:flex;flex-wrap:wrap;gap:7px}
+.linkchip{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;padding:4px 9px;border:1px solid var(--line);border-radius:2px;color:var(--muted);background:#0E1518}
+.linkchip:hover{color:var(--accent);border-color:var(--accent-dim)}
+
+/* ── 聲明頁(閱讀型) ── */
+.doc{max-width:78ch;margin:0 auto}
+.doc-head{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
+.doc-head h3{margin:10px 0 0;font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:.04em;line-height:1.45;text-wrap:balance}
+.doc-head .by{margin-top:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--faint);line-height:2}
+.doc h4{font-family:var(--serif);font-size:17px;font-weight:600;letter-spacing:.05em;margin:36px 0 4px}
+.doc h4 .no{font-family:var(--mono);font-size:11px;color:var(--brass);letter-spacing:.16em;margin-right:10px}
+.doc>p{font-size:14px;line-height:1.9;color:#CBD6D4;max-width:66ch}
+.assume{border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:16px 18px;margin-top:14px}
+.assume .a{font-size:14px;font-weight:500;line-height:1.7}
+.assume dl{display:grid;grid-template-columns:88px minmax(0,1fr);gap:6px 14px;margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line-soft)}
+.assume dt{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;padding-top:3px}
+.assume dd{margin:0;font-size:13px;line-height:1.7;color:var(--muted)}
+.assume dd.pos{color:#B9D0C7}
+.assume dd.neg{color:#DCBDB7}
+.gap{display:grid;grid-template-columns:minmax(0,1fr) 66px;gap:14px;align-items:start;border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:14px 18px;margin-top:12px}
+.gap .imp{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-align:right;padding-top:2px}
+.imp.high{color:var(--s-invalid)}.imp.mid{color:var(--h4)}.imp.low{color:var(--s-dormant)}
+.conf td:nth-child(2){font-family:var(--mono);letter-spacing:.08em}
+.wrongway{border-left:2px solid var(--h3);background:#171215;padding:16px 20px;margin-top:14px;border-radius:0 3px 3px 0}
+.wrongway p{margin:0 0 8px;font-size:13.5px;line-height:1.8}
+.wrongway p:last-child{margin-bottom:0;color:var(--muted)}
+.selfcheck{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-top:14px}
+.selfcheck div{background:var(--panel);padding:14px 16px}
+.selfcheck .t{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.selfcheck .r{font-family:var(--mono);font-size:13px;margin-top:8px;color:var(--s-verified)}
+.selfcheck .r.flag{color:var(--h4)}
+.selfcheck .d{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.65}
+@media (max-width:820px){.selfcheck{grid-template-columns:1fr}.kpis{grid-template-columns:1fr}.cgrid{grid-template-columns:1fr}.app{grid-template-columns:1fr}.rail{position:static;height:auto}}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--faint);line-height:1.9}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <h1>情報分析工作台</h1>
+      <div class="sub">Intel Chain Console</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-view="dash" aria-current="true"><span class="zh">戰情儀表板</span><span class="en">Dashboard</span></button>
+      <button data-view="chains"><span class="zh">事件鍊總表</span><span class="en">Chain Ledger</span></button>
+      <button data-view="countries"><span class="zh">國家利益背景</span><span class="en">Actor Baseline</span></button>
+      <button data-view="statement"><span class="zh">分析缺口聲明</span><span class="en">Gap Statement</span></button>
+    </nav>
+    <div class="rail-foot">
+      方法論 <b>SKILL-01…20</b><br>
+      帳本 <b>版本鏈快照</b><br>
+      校準 <b>Brier / ICD 203</b>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h2 id="crumb">戰情儀表板</h2>
+      <div class="meta">
+        <span>盤點回合 <b>#34</b></span>
+        <span>資料截止 <b>2026-08-28</b></span>
+        <span class="mockflag">MOCK 示意資料</span>
+      </div>
+    </header>
+
+    <!-- ══════ 頁一:戰情儀表板 ══════ -->
+    <section class="view on" id="view-dash"><div class="wrap">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="lab">分析區間</div>
+          <div class="val">238<small>日</small></div>
+          <div class="sub">2026-01-02 起連續追蹤<br><em>34</em> 個盤點回合</div>
+        </div>
+        <div class="kpi">
+          <div class="lab">事件鍊</div>
+          <div class="val">12<small>條</small></div>
+          <div class="sub">追蹤中 <em>10</em> · 已結案 <em>2</em></div>
+        </div>
+        <div class="kpi">
+          <div class="lab">預測快照</div>
+          <div class="val">25<small>版</small></div>
+          <div class="sub">平均鏈深 <em>2.1</em> 版 · 本月新增 <em>4</em></div>
+        </div>
+        <div class="kpi hi">
+          <div class="lab">預測準確率</div>
+          <div class="val">73<small>%</small></div>
+          <div class="sub">本期結案 <em>2</em> · 累計 <em>26</em> 題 · Brier <em>0.147</em></div>
+        </div>
+        <div class="kpi warn">
+          <div class="lab">待處理</div>
+          <div class="val">2<small>條</small></div>
+          <div class="sub">驗證視窗 60 日內到期<br>冷鏈休眠 <em>2</em> 條待喚醒</div>
+        </div>
+      </div>
+
+      <div class="mapgrid">
+        <div class="panel mapbox" style="grid-column:1/-1">
+          <div class="panel-h" style="padding-left:8px;padding-right:8px">
+            <h3>事件鍊地理熱度</h3>
+            <span class="note">熱度 = 該國出現在事件鍊行為者欄位的次數(核密度平滑)</span>
+          </div>
+          <canvas id="worldmap"></canvas>
+          <div class="tip" id="maptip"><div class="n"></div><div class="d"></div></div>
+          <div class="maplegend">
+            <span class="legend-lab">關聯度 低</span>
+            <span class="ramp"></span>
+            <span class="legend-lab">高</span>
+            <span class="legend-lab" style="margin-left:14px;color:var(--h5)">○ 標記＝行為者所在國</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><h3>事件鍊現況</h3><span class="note">按鍊齡排序 · 點擊列查看時間線</span></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>鍊 ID</th><th>事件鍊名稱</th><th>鍊齡</th><th>現況</th><th>最新機率</th><th>近況摘要</th></tr></thead>
+            <tbody id="dashrows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="foot">示意資料 · 非真實情報產出。機率一律 5% 步進(紀律 6);措辭與百分比對應見 estimative_language.json(紀律 16)。</div>
+    </div></section>
+
+    <!-- ══════ 頁二:事件鍊總表 ══════ -->
+    <section class="view" id="view-chains"><div class="wrap">
+      <div id="chains-list">
+        <div class="panel">
+          <div class="panel-h"><h3>事件鍊總表</h3><span class="note">12 條 · 版本鏈快照制</span></div>
+          <div class="filters">
+            <div class="fgroup" id="f-status"><span>現況</span></div>
+            <div class="fgroup" id="f-region"><span>區域</span></div>
+            <div class="search">
+              <span style="font-family:var(--mono);font-size:10px;color:var(--faint)">/</span>
+              <input id="f-q" type="search" placeholder="搜尋名稱、行為者、觀測指標…">
+            </div>
+          </div>
+          <div class="fcount" id="fcount"></div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>鍊 ID</th><th>事件鍊名稱</th><th>鍊齡</th><th>版本</th><th>現況</th><th>最新機率</th><th>驗證視窗</th></tr></thead>
+              <tbody id="chainrows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="chains-detail" style="display:none"></div>
+    </div></section>
+
+    <!-- ══════ 頁三:國家利益背景 ══════ -->
+    <section class="view" id="view-countries"><div class="wrap">
+      <p class="eyebrow">SKILL-04 行為者卡片 · 各國立場共用基準頁</p>
+      <div class="cgrid">
+        <div class="panel clist" id="clist"></div>
+        <div class="panel cbody" id="cbody"></div>
+      </div>
+      <div class="foot">基準頁的用途是「對比」:每次事件分析都要回頭問「這次是否改變了誰的利益排序、是否觸發紅線」。從利益推導行為方向,不從行為反推意圖(紀律 1)。</div>
+    </div></section>
+
+    <!-- ══════ 頁四:分析缺口聲明 ══════ -->
+    <section class="view" id="view-statement"><div class="wrap"><div class="doc">
+      <div class="doc-head">
+        <p class="eyebrow">SKILL-11 分析缺口聲明 · 步驟十</p>
+        <h3>本期研判哪裡穩固、哪裡在猜</h3>
+        <div class="by">
+          期別 2026-08-28 · 涵蓋 12 條事件鍊 · 對應盤點回合 #34<br>
+          分析者 情報分析工作台(示意) · 覆核 未覆核(mock)<br>
+          整體信心水準 <span style="color:var(--h4)">中</span> — 三條主鏈的關鍵假設共用同一個前提
+        </div>
+      </div>
+
+      <p>不標記不確定性的分析是危險的:讀者會把所有判斷當成同等可靠。以下把本期研判拆成「有把握的」與「在猜的」,讓讀者自行決定要信多少。</p>
+
+      <h4><span class="no">一</span>關鍵假設清單</h4>
+      <p>四條假設撐起本期全部 12 條鍊。任何一條被推翻,對應的鍊必須重跑而非微調機率。</p>
+
+      <div class="assume">
+        <div class="a">假設 1|主要行為者維持「可否認的騷擾」層級,不跨入公開武裝衝突。</div>
+        <dl>
+          <dt>若被推翻</dt><dd>P-2026-0312-01、P-2026-0623-01 兩條鍊的機率結構整組失效,不是調 5% 的問題</dd>
+          <dt>確認訊號</dt><dd class="pos">事件後 72 小時內官方不認領、不否認;軍演規模維持年度基線</dd>
+          <dt>否定訊號</dt><dd class="neg">出現具名認領、預備役動員公告、或民航改航範圍擴大到區域外</dd>
+        </dl>
+      </div>
+
+      <div class="assume">
+        <div class="a">假設 2|出口管制的執法強度由行政裁量決定,法規文本本身不再變動。</div>
+        <dl>
+          <dt>若被推翻</dt><dd>P-2026-0521-01 的觸發條件全部要重寫(目前綁在許可核發速率上)</dd>
+          <dt>確認訊號</dt><dd class="pos">清單維持現狀,但單月許可核發中位天數持續拉長</dd>
+          <dt>否定訊號</dt><dd class="neg">新增管制品項公告,或第三國被納入同等管制範圍</dd>
+        </dl>
+      </div>
+
+      <div class="assume">
+        <div class="a">假設 3|再保市場對區域風險的承保意願不會因單一事件全面撤出。</div>
+        <dl>
+          <dt>若被推翻</dt><dd>保險費率類的三條鍊(0312-01、0409-01、0418-02)會同時跳升,彼此不再獨立</dd>
+          <dt>確認訊號</dt><dd class="pos">戰爭險附加費率逐週漸進調整,分出比例平穩</dd>
+          <dt>否定訊號</dt><dd class="neg">主要再保人宣布暫停該區域續保,或費率單週跳升逾 1%</dd>
+        </dl>
+      </div>
+
+      <div class="assume">
+        <div class="a">假設 4|公開資訊的缺席等同於事件的缺席。</div>
+        <dl>
+          <dt>若被推翻</dt><dd>本期 4 次「A:真無訊號」處置有部分其實是漏收,冷鏈降階的依據跟著失效</dd>
+          <dt>確認訊號</dt><dd class="pos">事後回補的訊號與當時判斷一致(定向查證命中率 &gt; 80%)</dd>
+          <dt>否定訊號</dt><dd class="neg">同一鍊連續兩回合記 A 後突然出現大幅進展 — 代表中間漏收</dd>
+        </dl>
+      </div>
+
+      <h4><span class="no">二</span>已知的資訊缺口</h4>
+      <div class="gap">
+        <div><b>缺口 1|決策層內部的偏好排序</b><br>
+          全部 12 條鍊對「誰在拍板」的判斷都建立在公開人事與過往行為模式上,沒有任何直接來源。<br>
+          <span style="color:var(--faint);font-size:12.5px">可能填補方式:內部人事異動的時間序比對;預算科目變動</span></div>
+        <div class="imp high">影響<br>高</div>
+      </div>
+      <div class="gap">
+        <div><b>缺口 2|保險與再保的實際成交價</b><br>
+          目前用的是公開掛牌費率,與實際成交價可能有系統性落差,方向未知。<br>
+          <span style="color:var(--faint);font-size:12.5px">可能填補方式:船東側的成本揭露;航次成本結構訪談</span></div>
+        <div class="imp mid">影響<br>中</div>
+      </div>
+      <div class="gap">
+        <div><b>缺口 3|冷鏈期間的低強度訊號</b><br>
+          兩條冷鏈休眠期的覆蓋只靠關鍵詞比對,強度低於門檻的訊號會整批漏掉。<br>
+          <span style="color:var(--faint);font-size:12.5px">可能填補方式:降低喚醒門檻並接受更高的偽陽性</span></div>
+        <div class="imp low">影響<br>低</div>
+      </div>
+
+      <h4><span class="no">三</span>信心水準</h4>
+      <div class="panel" style="margin-top:14px"><div class="tablewrap"><table class="conf">
+        <thead><tr><th>核心判斷</th><th>信心</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr style="cursor:default"><td>南海執法船跨線在年內成為常態</td><td style="color:var(--s-verified)">高</td><td>已有 11 個回合的連續觀測,行為頻率與間隔皆穩定</td></tr>
+          <tr style="cursor:default"><td>荷姆茲保險費率的上行是結構性而非事件性</td><td style="color:var(--h4)">中</td><td>費率確實在漲,但與再保市場循環的混同尚未拆開</td></tr>
+          <tr style="cursor:default"><td>設備管制會透過第三國轉單被稀釋</td><td style="color:var(--h4)">中</td><td>轉單有跡象,但規模無法從公開貿易統計中分離</td></tr>
+          <tr style="cursor:default"><td>北極護航常態化在年內不會發生</td><td style="color:var(--s-dormant)">低</td><td>此鍊已休眠兩回合,判斷是延續性估計而非新證據(紀律 20)</td></tr>
+        </tbody>
+      </table></div></div>
+
+      <h4><span class="no">四</span>最可能的錯誤方向</h4>
+      <div class="wrongway">
+        <p>如果本期分析錯了,最可能錯在:<b>把三條保險費率鍊當成互相獨立的證據</b>,因而在同一個訊號上重複加權——它們共用假設 3,實際上是一條鍊的三個切面。</p>
+        <p>為什麼這個方向最容易出錯:三條鍊由不同回合建立、掛在不同區域標籤下,表面上看起來是三份互相印證的證據。互相印證的假象比單一薄弱證據更難察覺,因為它同時滿足「多來源」與「方向一致」兩個直覺上的可信度指標。</p>
+      </div>
+
+      <h4><span class="no">五</span>交付前三項自檢</h4>
+      <div class="selfcheck">
+        <div>
+          <div class="t">可證偽性(紀律 14)</div>
+          <div class="r">通過</div>
+          <div class="d">12 條鍊全部寫得出否定訊號;無「無論如何都成立」的措辭。</div>
+        </div>
+        <div>
+          <div class="t">政治化逆向審計(紀律 13)</div>
+          <div class="r">通過</div>
+          <div class="d">無指定結論的委託方;兩條與既有立場相反的鍊維持原機率未被下修。</div>
+        </div>
+        <div>
+          <div class="t">過度確定降階(紀律 17)</div>
+          <div class="r flag">標記 1 條</div>
+          <div class="d">P-2026-0114-01 原登 90%,未通過可改寫性測試,已降為 85% 後結案。</div>
+        </div>
+      </div>
+
+      <h4><span class="no">六</span>關鍵判斷來源附錄(ICD 206)</h4>
+      <p>示意頁僅列來源類型與評級,不列具體出處。評級採 NATO Admiralty A–F × 1–6。</p>
+      <div class="panel" style="margin-top:14px"><div class="tablewrap"><table>
+        <thead><tr><th>支撐判斷</th><th>來源類型</th><th>評級</th><th>備註</th></tr></thead>
+        <tbody>
+          <tr style="cursor:default"><td>費率上行</td><td>OSINT — 市場公告</td><td class="num">B2</td><td>來源可靠,內容可由多方交叉</td></tr>
+          <tr style="cursor:default"><td>執法船跨線頻率</td><td>OSINT — AIS / IMINT</td><td class="num">B1</td><td>可獨立驗證,時間序完整</td></tr>
+          <tr style="cursor:default"><td>轉單規模</td><td>OSINT — 貿易統計</td><td class="num">C3</td><td>口徑不一致,推論成分高</td></tr>
+          <tr style="cursor:default"><td>決策層偏好</td><td>推論 — 無直接來源</td><td class="num">F6</td><td>不可評估;對應缺口 1</td></tr>
+        </tbody>
+      </table></div></div>
+
+      <div class="foot">本頁為 UI 示意,內容為虛構示範資料,不構成任何真實情報判斷或決策依據。</div>
+    </div></div></section>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ════════════ 示意資料(全部虛構) ════════════ */
+
+const TODAY = "2026-08-28";
+
+const COUNTRIES = [
+  {n:"中國",lon:104,lat:35,w:18},{n:"美國",lon:-98,lat:39,w:16},{n:"台灣",lon:121,lat:23.7,w:14},
+  {n:"伊朗",lon:53,lat:32,w:12},{n:"俄羅斯",lon:56,lat:58,w:11},{n:"以色列",lon:35,lat:31.5,w:9},
+  {n:"日本",lon:138,lat:36,w:9},{n:"烏克蘭",lon:31,lat:49,w:8},{n:"沙烏地阿拉伯",lon:45,lat:24,w:7},
+  {n:"葉門",lon:47,lat:15.5,w:6},{n:"菲律賓",lon:122,lat:12,w:6},{n:"荷蘭",lon:5.5,lat:52,w:6},
+  {n:"土耳其",lon:35,lat:39,w:6},{n:"埃及",lon:30,lat:27,w:5},{n:"德國",lon:10,lat:51,w:5},
+  {n:"韓國",lon:127.5,lat:36.5,w:5},{n:"印度",lon:78,lat:22,w:5},{n:"英國",lon:-2,lat:54,w:4},
+  {n:"越南",lon:106,lat:16,w:4},{n:"新加坡",lon:104,lat:1.3,w:4},{n:"阿聯",lon:54,lat:24,w:4},
+  {n:"澳洲",lon:134,lat:-25,w:4},{n:"法國",lon:2,lat:47,w:3},{n:"挪威",lon:10,lat:62,w:3},
+  {n:"哈薩克",lon:67,lat:48,w:3},{n:"卡達",lon:51,lat:25,w:3},{n:"馬來西亞",lon:102,lat:4,w:3},
+  {n:"波蘭",lon:19,lat:52,w:2},{n:"巴西",lon:-51,lat:-12,w:2},{n:"奈及利亞",lon:8,lat:10,w:2},
+  {n:"南非",lon:24,lat:-30,w:2},{n:"加拿大",lon:-106,lat:56,w:2},{n:"墨西哥",lon:-102,lat:23,w:2},
+  {n:"巴拿馬",lon:-80,lat:9,w:2}
+];
+
+const STATUS = {
+  active:{lab:"活躍追蹤",cls:"active"},
+  observing:{lab:"觀測中",cls:"observing"},
+  dormant:{lab:"冷鏈休眠",cls:"dormant"},
+  verified:{lab:"已驗證",cls:"verified"},
+  invalidated:{lab:"已否證",cls:"invalidated"}
+};
+
+const CHAINS = [
+{
+  id:"P-2026-0106-02", name:"中亞天然氣管線議價僵局延續至供暖季", region:"歐亞內陸",
+  start:"2026-01-06", days:234, status:"dormant", prob:45, wording:"兩可", window:"2026-11-30",
+  actors:["哈薩克","中國","俄羅斯","土耳其"],
+  summary:"連續 3 回合記 A,已降為冷鏈;喚醒關鍵詞維持在管線檢修公告與過境費調整。",
+  versions:[
+    {v:1,id:"P-2026-0106-02",date:"2026-01-06",prob:55,word:"可能",st:"superseded",note:"首發:以過境費談判破裂的歷史頻率為基準率。"},
+    {v:2,id:"P-2026-0106-02-v2",date:"2026-03-22",prob:45,word:"兩可",st:"latest",note:"雙方恢復技術層級會談,基準率下修;此後無新訊號。"}
+  ],
+  timeline:[
+    {d:"2026-01-06",k:"快照",t:"建立鍊,首發機率 55%(兩可上緣)。"},
+    {d:"2026-02-11",k:"訊號",t:"過境費調整草案外洩,幅度高於預期。"},
+    {d:"2026-03-22",k:"快照",t:"技術層級會談恢復,機率下修。",delta:"55% → 45%"},
+    {d:"2026-06-30",k:"處置",t:"處置 A:真無訊號(第 1 回合)。"},
+    {d:"2026-07-24",k:"處置",t:"處置 A:真無訊號(第 2 回合)。"},
+    {d:"2026-08-19",k:"處置",t:"處置 A:真無訊號(第 3 回合)→ 觸發紀律 21,降為冷鏈休眠。"}
+  ],
+  indicators:["管線年度檢修公告的排程異動","過境費公告與實際結算價差","下游合約續約的月份分布"],
+  triggers:["任一方公開宣布暫停供氣","過境費調幅單次逾 15%","第三方仲裁受理"],
+  assumptions:["雙方都不願在供暖季前攤牌","替代管線的產能上限在年內不變"]
+},
+{
+  id:"P-2026-0114-01", name:"稀土出口配額於上半年出現實質收緊", region:"東亞",
+  start:"2026-01-14", days:226, status:"verified", prob:85, wording:"很可能", window:"2026-06-30",
+  actors:["中國","美國","日本","德國"],
+  summary:"已於 6 月結案並命中;原登 90% 未通過過度確定測試,降為 85% 後結案(紀律 17)。",
+  versions:[
+    {v:1,id:"P-2026-0114-01",date:"2026-01-14",prob:70,word:"可能",st:"superseded",note:"首發:以配額公告的年度節奏為基準率。"},
+    {v:2,id:"P-2026-0114-01-v2",date:"2026-03-05",prob:85,word:"很可能",st:"superseded",note:"許可核發中位天數連兩月拉長,上修;原擬 90%,可改寫性測試未過,降階至 85%。"},
+    {v:3,id:"P-2026-0114-01-v3",date:"2026-06-18",prob:85,word:"很可能",st:"verified",note:"結案:配額公告落地,實質收緊成立。outcome value = 1。"}
+  ],
+  timeline:[
+    {d:"2026-01-14",k:"快照",t:"建立鍊,首發機率 70%。"},
+    {d:"2026-02-27",k:"訊號",t:"許可核發中位天數自 18 日拉長至 31 日。"},
+    {d:"2026-03-05",k:"快照",t:"上修;同時對 90% 執行可改寫性測試並降階。",delta:"70% → 85%"},
+    {d:"2026-05-09",k:"訊號",t:"下游採購方開始揭露替代來源比例,間接印證供給收緊。"},
+    {d:"2026-06-18",k:"結案",t:"配額公告落地,判定命中。Brier 分項貢獻 0.0225。"}
+  ],
+  indicators:["月度出口許可核發中位天數","下游揭露的替代來源比例","期貨與現貨價差"],
+  triggers:["配額公告正式發布","許可核發中位天數逾 40 日"],
+  assumptions:["配額制度本身不被更換為其他工具","下游不會在半年內完成去庫存"]
+},
+{
+  id:"P-2026-0225-04", name:"歐盟碳邊境調整機制於年中提升執法強度", region:"歐洲",
+  start:"2026-02-25", days:184, status:"invalidated", prob:65, wording:"可能", window:"2026-07-31",
+  actors:["德國","法國","波蘭","印度","巴西"],
+  summary:"視窗到期未發生,判定否證。校準筆記指出高估來自把「立法動能」誤讀為「執法量能」。",
+  versions:[
+    {v:1,id:"P-2026-0225-04",date:"2026-02-25",prob:65,word:"可能",st:"superseded",note:"首發:以委員會的公開時程與過往落地率為基準。"},
+    {v:2,id:"P-2026-0225-04-v2",date:"2026-07-31",prob:65,word:"可能",st:"invalidated",note:"視窗到期,查核未見執法案件量變化,判定否證。outcome value = 0。"}
+  ],
+  timeline:[
+    {d:"2026-02-25",k:"快照",t:"建立鍊,首發機率 65%。"},
+    {d:"2026-04-30",k:"訊號",t:"申報義務範圍擴大的技術文件公布 — 立法面有動能。"},
+    {d:"2026-06-12",k:"處置",t:"處置 C:間接訊號(稽查人力預算未同步增加,與判斷方向相反)。"},
+    {d:"2026-07-31",k:"結案",t:"視窗到期,執法案件量無變化,判定否證。"}
+  ],
+  indicators:["季度執法案件數","稽查人力預算科目","申報駁回率"],
+  triggers:["首宗處分案公告","稽查人力預算增列"],
+  assumptions:["立法進度可作為執法強度的領先指標(此假設已被本鍊推翻)"]
+},
+{
+  id:"P-2026-0312-01", name:"荷姆茲海峽航運保險費率結構性上行", region:"中東",
+  start:"2026-03-12", days:169, status:"active", prob:70, wording:"可能", window:"2026-09-30",
+  actors:["伊朗","美國","沙烏地阿拉伯","阿聯","卡達"],
+  summary:"四版快照,機率自 45% 逐步推升至 70%;最近一次上修由護航空窗驅動。",
+  versions:[
+    {v:1,id:"P-2026-0312-01",date:"2026-03-12",prob:45,word:"兩可",st:"superseded",note:"首發:以近五年同期費率波動為基準率。"},
+    {v:2,id:"P-2026-0312-01-v2",date:"2026-04-02",prob:60,word:"可能",st:"superseded",note:"兩起扣船事件落在同一月,超過觸發門檻。"},
+    {v:3,id:"P-2026-0312-01-v3",date:"2026-05-19",prob:65,word:"可能",st:"superseded",note:"倫敦市場戰爭險附加費率單週調升 0.35%。"},
+    {v:4,id:"P-2026-0312-01-v4",date:"2026-08-05",prob:70,word:"可能",st:"latest",note:"護航編隊輪替出現 12 日空窗,騷擾成本下降。"}
+  ],
+  timeline:[
+    {d:"2026-03-12",k:"快照",t:"建立鍊,首發機率 45%。"},
+    {d:"2026-04-02",k:"快照",t:"月內第二起扣船事件,觸發條件成立。",delta:"45% → 60%"},
+    {d:"2026-05-19",k:"快照",t:"戰爭險附加費率單週跳升 0.35%。",delta:"60% → 65%"},
+    {d:"2026-06-28",k:"處置",t:"處置 C:間接訊號 — 區域再保分出比例上升,但未達建快照門檻。"},
+    {d:"2026-08-05",k:"快照",t:"護航編隊輪替空窗 12 日。",delta:"65% → 70%"},
+    {d:"2026-08-21",k:"處置",t:"處置 A:本回合真無訊號(第 1 回合)。"}
+  ],
+  indicators:["倫敦市場戰爭險附加費率(週)","荷姆茲以東 AIS 熄燈船數","護航編隊在站天數","區域再保分出比例"],
+  triggers:["單月扣船 ≥ 2 起","附加費率單週跳升 ≥ 0.2%","護航空窗 > 10 日"],
+  assumptions:["伊朗維持可否認的騷擾層級","海灣國家不主動擴大衝突","再保市場不整體撤出該區域"]
+},
+{
+  id:"P-2026-0409-01", name:"黑海穀物走廊保險機制在到期前完成續期", region:"黑海",
+  start:"2026-04-09", days:141, status:"observing", prob:60, wording:"可能", window:"2026-10-15",
+  actors:["烏克蘭","俄羅斯","土耳其","埃及"],
+  summary:"斡旋方換手後節奏放緩;觀測中,尚未達到建新快照的門檻。",
+  versions:[
+    {v:1,id:"P-2026-0409-01",date:"2026-04-09",prob:55,word:"可能",st:"superseded",note:"首發:以前兩次續期的談判時長為基準。"},
+    {v:2,id:"P-2026-0409-01-v2",date:"2026-07-02",prob:60,word:"可能",st:"latest",note:"承保方預先報價,顯示市場預期續期成立。"}
+  ],
+  timeline:[
+    {d:"2026-04-09",k:"快照",t:"建立鍊,首發機率 55%。"},
+    {d:"2026-05-28",k:"訊號",t:"斡旋方換手,談判節奏放緩。"},
+    {d:"2026-07-02",k:"快照",t:"承保方預先報價。",delta:"55% → 60%"},
+    {d:"2026-08-14",k:"處置",t:"處置 A:真無訊號(第 1 回合)。"}
+  ],
+  indicators:["承保方報價揭露","走廊月度通行船次","談判輪次間隔"],
+  triggers:["任一方宣布退出機制","到期前 30 日仍無報價"],
+  assumptions:["斡旋方有續談的政治誘因","通行量不因單一事件歸零"]
+},
+{
+  id:"P-2026-0418-02", name:"主要船公司在年內恢復常態使用蘇伊士航線", region:"紅海",
+  start:"2026-04-18", days:132, status:"observing", prob:35, wording:"不太可能", window:"2026-12-31",
+  actors:["埃及","葉門","美國","英國","新加坡"],
+  summary:"復航測試僅單艘、單航次,未構成常態化訊號;機率維持在不太可能區間。",
+  versions:[
+    {v:1,id:"P-2026-0418-02",date:"2026-04-18",prob:30,word:"不太可能",st:"superseded",note:"首發:以繞行成本已被納入年度預算為由,復航誘因偏低。"},
+    {v:2,id:"P-2026-0418-02-v2",date:"2026-06-21",prob:35,word:"不太可能",st:"latest",note:"單艘測試性復航;僅小幅上修,未視為常態化。"}
+  ],
+  timeline:[
+    {d:"2026-04-18",k:"快照",t:"建立鍊,首發機率 30%。"},
+    {d:"2026-06-21",k:"快照",t:"單艘測試性復航,幅度不足以改變判斷。",delta:"30% → 35%"},
+    {d:"2026-08-02",k:"訊號",t:"運河當局公布過境費折扣方案,誘因面出現變化。"},
+    {d:"2026-08-22",k:"處置",t:"處置 C:間接訊號 — 折扣方案尚無船公司公開回應。"}
+  ],
+  indicators:["月度過境船次","過境費折扣方案的採用率","繞行航線的運價差"],
+  triggers:["單月過境船次回到基線 70%","任一前三大船公司宣布全面復航"],
+  assumptions:["繞行成本已被吸收進年度合約","保險費率是復航的主要門檻而非航行安全本身"]
+},
+{
+  id:"P-2026-0521-01", name:"先進製程設備管制透過第三國轉單被實質稀釋", region:"跨區域",
+  start:"2026-05-21", days:99, status:"active", prob:60, wording:"可能", window:"2026-11-30",
+  actors:["荷蘭","日本","中國","美國","新加坡","馬來西亞"],
+  summary:"轉單跡象明確但規模無法從公開統計分離;缺口 3 直接影響本鍊的可驗證性。",
+  versions:[
+    {v:1,id:"P-2026-0521-01",date:"2026-05-21",prob:50,word:"兩可",st:"superseded",note:"首發:轉單為歷史常態,但本輪管制的稽核強度未知。"},
+    {v:2,id:"P-2026-0521-01-v2",date:"2026-07-15",prob:60,word:"可能",st:"latest",note:"第三國的同類設備進口額出現與終端需求不相稱的成長。"}
+  ],
+  timeline:[
+    {d:"2026-05-21",k:"快照",t:"建立鍊,首發機率 50%。"},
+    {d:"2026-06-30",k:"訊號",t:"兩個第三國的設備進口額月增逾 40%,終端產能無對應擴張。"},
+    {d:"2026-07-15",k:"快照",t:"上修;同時標記統計口徑不一致的風險。",delta:"50% → 60%"},
+    {d:"2026-08-25",k:"處置",t:"處置 B:定向查證補入 — 轉口貿易佔比的第三方估算。"}
+  ],
+  indicators:["第三國同類設備進口額","終端產能擴張公告","許可核發中位天數","轉口貿易佔比"],
+  triggers:["第三國被納入同等管制範圍","單一買方進口額佔比逾 30%"],
+  assumptions:["管制執法強度由行政裁量決定,法規文本不再變動","公開貿易統計的品項口徑在年內不變"]
+},
+{
+  id:"P-2026-0602-03", name:"北極東北航道護航於年內常態化", region:"北極",
+  start:"2026-06-02", days:87, status:"dormant", prob:30, wording:"不太可能", window:"2026-12-31",
+  actors:["俄羅斯","挪威","中國","加拿大"],
+  summary:"航季尚未進入高峰即失去訊號,連續 3 回合記 A,已降為冷鏈。",
+  versions:[
+    {v:1,id:"P-2026-0602-03",date:"2026-06-02",prob:30,word:"不太可能",st:"latest",note:"首發:破冰船可用艘數是硬約束,年內難以擴充。"}
+  ],
+  timeline:[
+    {d:"2026-06-02",k:"快照",t:"建立鍊,首發機率 30%。"},
+    {d:"2026-07-08",k:"處置",t:"處置 A:真無訊號(第 1 回合)。"},
+    {d:"2026-08-01",k:"處置",t:"處置 A:真無訊號(第 2 回合)。"},
+    {d:"2026-08-26",k:"處置",t:"處置 A:真無訊號(第 3 回合)→ 降為冷鏈休眠。"}
+  ],
+  indicators:["破冰船可用艘數","航季通行船次","護航申請受理公告"],
+  triggers:["新增破冰船服役","單月通行船次逾歷史同期兩倍"],
+  assumptions:["破冰船產能在年內不變","航季長度不因異常氣候大幅延長"]
+},
+{
+  id:"P-2026-0623-01", name:"南海海警執法船跨線成為常態化行為", region:"東亞",
+  start:"2026-06-23", days:66, status:"active", prob:75, wording:"可能", window:"2026-10-31",
+  actors:["中國","菲律賓","越南","馬來西亞","美國"],
+  summary:"本期信心最高的一條鍊:11 個回合連續觀測,行為頻率與間隔皆穩定。",
+  versions:[
+    {v:1,id:"P-2026-0623-01",date:"2026-06-23",prob:60,word:"可能",st:"superseded",note:"首發:以近一年跨線頻率的移動平均為基準率。"},
+    {v:2,id:"P-2026-0623-01-v2",date:"2026-07-19",prob:70,word:"可能",st:"superseded",note:"跨線間隔自 11 日縮短至 6 日,且不隨天候中斷。"},
+    {v:3,id:"P-2026-0623-01-v3",date:"2026-08-24",prob:75,word:"可能",st:"latest",note:"補給任務期間仍維持跨線,顯示行為已脫離事件驅動。"}
+  ],
+  timeline:[
+    {d:"2026-06-23",k:"快照",t:"建立鍊,首發機率 60%。"},
+    {d:"2026-07-19",k:"快照",t:"跨線間隔縮短且不隨天候中斷。",delta:"60% → 70%"},
+    {d:"2026-08-11",k:"訊號",t:"第三方觀測到同一船號連續三航次執行相同航路。"},
+    {d:"2026-08-24",k:"快照",t:"補給任務期間行為未中斷,判定脫離事件驅動。",delta:"70% → 75%"}
+  ],
+  indicators:["跨線事件間隔(日)","涉入船號的重複率","天候中斷後的恢復時間"],
+  triggers:["跨線間隔穩定 < 7 日達 8 週","出現非海警船種接替執行"],
+  assumptions:["行為者維持可否認的騷擾層級","第三方觀測的覆蓋率不下降"]
+},
+{
+  id:"P-2026-0708-02", name:"東海防空識別區摩擦升級至攔截頻率翻倍", region:"東亞",
+  start:"2026-07-08", days:51, status:"active", prob:55, wording:"可能", window:"2026-10-31",
+  actors:["中國","日本","台灣","美國","韓國"],
+  summary:"季節性因素尚未排除,機率停在可能區間下緣;下一回合的重點是拆開季節性與趨勢。",
+  versions:[
+    {v:1,id:"P-2026-0708-02",date:"2026-07-08",prob:50,word:"兩可",st:"superseded",note:"首發:攔截頻率的年度季節性顯著,基準率不易分離。"},
+    {v:2,id:"P-2026-0708-02-v2",date:"2026-08-17",prob:55,word:"可能",st:"latest",note:"單月攔截架次高於去年同期 1.6 倍,但仍在季節性區間上緣。"}
+  ],
+  timeline:[
+    {d:"2026-07-08",k:"快照",t:"建立鍊,首發機率 50%。"},
+    {d:"2026-08-03",k:"訊號",t:"公布之月度攔截架次高於去年同期。"},
+    {d:"2026-08-17",k:"快照",t:"小幅上修;明確標記季節性未排除。",delta:"50% → 55%"}
+  ],
+  indicators:["月度攔截架次","進入路徑的重複度","公告發布的時間落差"],
+  triggers:["連續兩月架次高於同期兩倍","出現新的進入路徑"],
+  assumptions:["攔截架次的統計口徑不變","季節性因素可用去年同期作為對照"]
+},
+{
+  id:"P-2026-0730-01", name:"中東斡旋管道在秋季前重啟", region:"中東",
+  start:"2026-07-30", days:29, status:"observing", prob:40, wording:"不太可能", window:"2026-09-30",
+  actors:["埃及","土耳其","卡達","以色列","美國"],
+  summary:"最年輕的觀測鍊之一;訊號集中在人員往來,尚未出現制度性動作。",
+  versions:[
+    {v:1,id:"P-2026-0730-01",date:"2026-07-30",prob:40,word:"不太可能",st:"latest",note:"首發:斡旋方有意願但缺乏可交換籌碼。"}
+  ],
+  timeline:[
+    {d:"2026-07-30",k:"快照",t:"建立鍊,首發機率 40%。"},
+    {d:"2026-08-12",k:"訊號",t:"技術層級人員往來恢復,但無公開議程。"},
+    {d:"2026-08-27",k:"處置",t:"處置 C:間接訊號 — 第三方報導提及籌備工作,來源評級 C3。"}
+  ],
+  indicators:["技術層級人員往來","公開議程發布","第三方斡旋國的公開表態"],
+  triggers:["雙方同時確認會談日期","出現可交換的具體議題清單"],
+  assumptions:["斡旋方的政治週期允許在秋季前投入","無突發事件重置談判基礎"]
+},
+{
+  id:"P-2026-0815-01", name:"半導體關鍵人才跨境流動限制擴大至供應商層級", region:"東亞",
+  start:"2026-08-15", days:13, status:"active", prob:50, wording:"兩可", window:"2026-12-31",
+  actors:["台灣","韓國","中國","美國","日本"],
+  summary:"本期最新建立的鍊,僅一版快照;觀測指標仍在建立中。",
+  versions:[
+    {v:1,id:"P-2026-0815-01",date:"2026-08-15",prob:50,word:"兩可",st:"latest",note:"首發:主廠層級的限制已存在,擴大至供應商屬合理外推但無直接訊號。"}
+  ],
+  timeline:[
+    {d:"2026-08-15",k:"快照",t:"建立鍊,首發機率 50%(兩可)。"},
+    {d:"2026-08-23",k:"訊號",t:"供應商公會提出對等待遇疑慮,顯示議題已進入討論。"}
+  ],
+  indicators:["供應商層級的人事公告","公會與主管機關的往來文件","跨境派駐核准件數"],
+  triggers:["主管機關預告修法","首例供應商層級的個案處分"],
+  assumptions:["主廠層級的限制不被放寬","供應商的議價能力不足以擋下擴大適用"]
+}
+];
+
+const COUNTRY_PROFILES = [
+{
+  n:"中國", role:"直接行為者 · 出現於 5 條事件鍊",
+  core:"維持出口管制工具的談判價值,同時避免供給收緊反過來加速下游去中化。在周邊海域以低於衝突門檻的持續行為累積既成事實。",
+  priority:["政權與體制穩定優先於任何單一議題的短期收益","關鍵技術供應鏈的自主可控","周邊既成事實的累積(以不觸發集體反應為上限)"],
+  redline:["涉及主權表述的正式改變","關鍵原物料的反向斷供被證明對己方傷害更大時的路徑鎖死"],
+  constraint:"出口管制以配額與許可為工具,行政裁量空間大;正式修法反而稀有,因此「法規未變」不可讀作「強度未變」。",
+  bias:"對手情報體系結構性失靈評估(紀律 15):內部回報鏈偏好報喜,對外部反制強度可能系統性低估。",
+  drift:"本期未偵測到利益排序的偏離;跨線行為的頻率上升屬既有排序下的強度變化,非排序改變。",
+  chains:["P-2026-0623-01","P-2026-0708-02","P-2026-0521-01","P-2026-0114-01","P-2026-0815-01"]
+},
+{
+  n:"美國", role:"直接行為者 · 出現於 6 條事件鍊",
+  core:"以最低軍事投入維持關鍵航道的可通行性,並讓管制成本主要由盟友與第三國承擔。",
+  priority:["避免同時投入兩個以上戰區","盟友體系的可信度(承諾一旦跳票,成本外溢到所有其他鍊)","國內政治週期對長期承諾的約束"],
+  redline:["對條約盟友的直接攻擊","關鍵航道被實質封閉超過可承受的時間窗"],
+  constraint:"護航與軍售受國會週期與預算年度切割;政策連續性在選舉年前後有可預期的斷點。",
+  bias:"公開表態與實際部署的落差穩定存在,判讀時以部署為準、表態為輔。",
+  drift:"護航編隊輪替出現 12 日空窗,與「維持可通行性」的宣示不一致 — 已作為 P-2026-0312-01 上修的依據。",
+  chains:["P-2026-0312-01","P-2026-0521-01","P-2026-0623-01","P-2026-0708-02","P-2026-0418-02","P-2026-0730-01"]
+},
+{
+  n:"伊朗", role:"直接行為者 · 出現於 1 條事件鍊",
+  core:"以可否認的低烈度行動維持對航道的影響力,把成本轉嫁到保險與航運市場,而不承擔公開衝突的代價。",
+  priority:["政權存續","制裁壓力的緩解路徑不被關閉","區域代理網絡的可用性"],
+  redline:["核設施遭直接打擊","代理網絡被系統性拔除"],
+  constraint:"正式的封閉海峽需要付出無法否認的代價,因此工具集實際上被限制在騷擾層級。",
+  bias:"外界易把「未認領」讀成「未涉入」,也易把「未涉入」讀成「無能力」— 兩個方向都會失真。",
+  drift:"本期無排序改變。扣船事件的間隔縮短屬強度變化。",
+  chains:["P-2026-0312-01"]
+},
+{
+  n:"以色列", role:"直接行為者 · 出現於 2 條事件鍊",
+  core:"壓制區域對手的能力累積速度,同時維持關鍵夥伴的支持不因單一行動流失。",
+  priority:["本土防衛與情報預警的完整性","對手能力累積速度的壓制","國際支持的維繫(與前兩項衝突時最先被讓步)"],
+  redline:["對手取得質變級能力","北境同時開啟第二戰線"],
+  constraint:"聯合政府結構使長期承諾的可信度受內閣組成變動影響。",
+  bias:"預警體系對「意圖」的判讀歷來偏向能力導向,對政治性訊號的權重偏低。",
+  drift:"斡旋管道議題上出現與既有排序不一致的接觸訊號,已列入 P-2026-0730-01 的觀測。",
+  chains:["P-2026-0312-01","P-2026-0730-01"]
+},
+{
+  n:"日本", role:"直接行為者 · 出現於 3 條事件鍊",
+  core:"在不改變既有法律框架的前提下,提高應對周邊摩擦的反應速度與可持續性。",
+  priority:["海上生命線的穩定(能源與原物料)","同盟關係的可預期性","國內法律框架的連續性"],
+  redline:["離島遭實質控制","關鍵原物料供給被單一來源掐住"],
+  constraint:"防衛行動受法律解釋約束,程序時間長於行為者的行動節奏 — 這個時間差本身就是可被利用的縫隙。",
+  bias:"對漸進式既成事實的反應門檻偏高,傾向逐案處理而非趨勢認定。",
+  drift:"稀土鍊結案後,替代來源比例的揭露速度快於過往,顯示排序中的第一項權重上升。",
+  chains:["P-2026-0708-02","P-2026-0521-01","P-2026-0114-01"]
+},
+{
+  n:"荷蘭", role:"間接行為者 · 出現於 1 條事件鍊",
+  core:"在配合管制的同時保住設備業的長期市場地位,避免管制成為永久性的市佔轉移。",
+  priority:["產業長期競爭力","歐盟內部與跨大西洋協調的一致性","短期營收(排序最低,可被前兩項犧牲)"],
+  redline:["管制範圍擴大到不可逆的市佔流失","被要求承擔不對等的執法成本"],
+  constraint:"許可核發權在本國主管機關,但清單制定受外部協調影響;裁量空間集中在核發速度而非核發與否。",
+  bias:"官方口徑強調「依法核發」,不會主動揭露速度變化 — 因此中位天數是比公告更可靠的觀測點。",
+  drift:"本期未偵測到偏離。",
+  chains:["P-2026-0521-01"]
+},
+{
+  n:"俄羅斯", role:"直接行為者 · 出現於 3 條事件鍊",
+  core:"把能源與過境路線維持為可談判的槓桿,避免任何一條路線被替代到無法回頭。",
+  priority:["戰時經濟的資金流不中斷","過境與管線槓桿的可用性","與買方的長期綁定關係"],
+  redline:["主要出口通道被完全替代","過境國取得獨立定價權"],
+  constraint:"制裁使金流路徑受限,價格談判的實際彈性低於公開表態所暗示的程度。",
+  bias:"對外談判姿態與內部承受能力落差大;以公開表態推估底線會系統性高估。",
+  drift:"中亞管線議題轉入技術層級後失去訊號,對應鍊已降為冷鏈 — 資訊真空不等於維持機率(紀律 20)。",
+  chains:["P-2026-0106-02","P-2026-0409-01","P-2026-0602-03"]
+},
+{
+  n:"台灣", role:"直接行為者 · 出現於 3 條事件鍊",
+  core:"維持關鍵產業的技術落差與人才留存,同時避免任何單一措施被解讀為改變現狀。",
+  priority:["關鍵產業的技術領先與人才留存","國際支持與供應鏈中的不可替代性","對外措施的低刺激性"],
+  redline:["核心製程人才與技術的系統性外流","供應鏈中的角色被替代到失去談判地位"],
+  constraint:"人才流動限制受憲法層級的職業自由約束,擴大適用需要修法而非行政裁量。",
+  bias:"產業界與主管機關對「流動」的定義不一致,統計基礎因此難以互相驗證。",
+  drift:"供應商公會提出對等待遇疑慮,顯示排序第一項與第三項出現張力 — 已建 P-2026-0815-01 追蹤。",
+  chains:["P-2026-0815-01","P-2026-0708-02","P-2026-0623-01"]
+}
+];
+
+/* ════════════ 通用工具 ════════════ */
+const $ = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const maxDays = Math.max(...CHAINS.map(c=>c.days));
+const chipHTML = st => '<span class="chip '+STATUS[st].cls+'">'+STATUS[st].lab+'</span>';
+const probColor = p => p>=80?"var(--h5)":p>=55?"var(--h4)":p>=45?"var(--muted)":"var(--s-dormant)";
+
+/* ════════════ 導覽 ════════════ */
+const CRUMB = {dash:"戰情儀表板",chains:"事件鍊總表",countries:"國家利益背景",statement:"分析缺口聲明"};
+$$("#nav button").forEach(b=>{
+  b.addEventListener("click",()=>go(b.dataset.view));
+});
+function go(v){
+  $$("#nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.view===v ? "true":"false"));
+  $$(".view").forEach(s=>s.classList.toggle("on", s.id==="view-"+v));
+  $("#crumb").textContent = CRUMB[v];
+  window.scrollTo({top:0,behavior:"instant"});
+}
+
+/* ════════════ 頁一:世界地圖熱力圖 ════════════ */
+
+/* 粗略陸塊輪廓(僅供示意;非測量級底圖)。每個多邊形為 [經度,緯度] 序列。 */
+const LAND = [
+ [[-168,66],[-166,60],[-158,56],[-152,58],[-145,60],[-136,58],[-130,52],[-124,46],[-122,37],[-117,32],[-113,28],[-106,23],[-97,20],[-92,16],[-86,13],[-83,9],[-79,9],[-83,15],[-87,20],[-91,25],[-95,29],[-88,30],[-82,26],[-80,32],[-75,36],[-70,42],[-66,45],[-60,47],[-56,52],[-64,56],[-76,57],[-78,62],[-85,63],[-95,62],[-92,68],[-105,69],[-120,70],[-133,69],[-141,70],[-156,71]],
+ [[-45,60],[-38,65],[-30,68],[-22,71],[-20,76],[-25,81],[-35,83],[-50,82],[-58,79],[-55,72],[-52,66],[-48,61]],
+ [[-79,9],[-72,12],[-64,11],[-60,8],[-52,5],[-50,0],[-44,-2],[-38,-5],[-35,-8],[-38,-13],[-39,-18],[-45,-23],[-48,-25],[-53,-33],[-57,-35],[-62,-39],[-63,-42],[-66,-46],[-69,-52],[-75,-53],[-73,-45],[-74,-38],[-72,-30],[-70,-23],[-71,-18],[-77,-8],[-80,-4],[-81,2],[-77,7]],
+ [[-17,15],[-16,20],[-12,25],[-6,30],[0,32],[10,34],[20,32],[28,31],[33,31],[36,26],[38,18],[43,12],[48,11],[51,11],[45,5],[42,0],[41,-5],[40,-12],[35,-19],[33,-26],[28,-31],[25,-34],[19,-35],[15,-27],[12,-18],[13,-10],[9,-1],[9,4],[3,6],[-4,5],[-9,5],[-13,9],[-16,12]],
+ [[-10,37],[-9,43],[-2,43],[0,49],[-5,50],[1,51],[4,53],[8,54],[10,58],[14,56],[18,59],[21,60],[25,65],[21,70],[28,71],[40,68],[55,68],[68,68],[75,73],[90,75],[105,77],[113,74],[130,72],[142,72],[160,70],[172,67],[180,66],[180,60],[170,60],[163,57],[156,52],[144,45],[140,42],[132,42],[130,42],[129,38],[127,35],[126,34],[126,37],[124,39],[121,39],[122,31],[121,25],[110,21],[105,10],[103,2],[97,8],[95,16],[92,21],[88,21],[80,15],[77,8],[73,20],[68,24],[62,25],[57,25],[50,29],[44,29],[40,24],[35,28],[36,36],[30,40],[26,40],[23,38],[19,40],[13,38],[12,45],[7,44],[3,43],[-3,36]],
+ [[-5,50],[-3,54],[-5,58],[-2,58],[0,53],[1,51]],
+ [[-10,52],[-6,52],[-6,55],[-10,55]],
+ [[-24,64],[-14,65],[-15,66],[-22,66]],
+ [[129,32],[132,33],[136,35],[140,36],[141,40],[145,44],[143,44],[139,38],[135,34],[131,31]],
+ [[120,22],[122,25],[121,25],[120,22]],
+ [[120,18],[124,18],[126,13],[126,7],[122,6],[119,11]],
+ [[95,5],[100,0],[106,-6],[104,-6],[98,2]],
+ [[109,2],[117,4],[118,-1],[114,-4],[110,-3]],
+ [[105,-6],[114,-8],[114,-7],[105,-5]],
+ [[131,-1],[141,-3],[150,-9],[141,-9],[133,-4]],
+ [[113,-22],[114,-26],[115,-34],[118,-35],[129,-32],[135,-35],[140,-38],[147,-38],[150,-37],[153,-28],[146,-19],[142,-11],[137,-12],[132,-11],[126,-14],[121,-20]],
+ [[166,-46],[170,-44],[173,-41],[175,-37],[177,-38],[174,-41],[171,-45]],
+ [[43,-12],[50,-15],[47,-25],[44,-20]],
+ [[80,6],[82,7],[81,9]],
+ [[-84,22],[-77,20],[-74,20],[-79,23]]
+];
+
+const RAMP = [[27,31,42],[74,44,90],[142,59,84],[199,90,63],[232,155,60],[247,212,107]];
+function rampAt(t){
+  t = Math.max(0,Math.min(1,t));
+  const seg = (RAMP.length-1)*t, i = Math.min(RAMP.length-2, Math.floor(seg)), f = seg-i;
+  const a = RAMP[i], b = RAMP[i+1];
+  return [Math.round(a[0]+(b[0]-a[0])*f), Math.round(a[1]+(b[1]-a[1])*f), Math.round(a[2]+(b[2]-a[2])*f)];
+}
+function inPoly(x,y,poly){
+  let hit = false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][0], yi=poly[i][1], xj=poly[j][0], yj=poly[j][1];
+    if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) hit = !hit;
+  }
+  return hit;
+}
+
+const LAT_TOP = 82, LAT_BOT = -58, LON_STEP = 2, LAT_STEP = 2, SIGMA = 8;
+let DOTS = null;
+
+function buildDots(){
+  const dots = [];
+  for(let lat=LAT_TOP; lat>=LAT_BOT; lat-=LAT_STEP){
+    for(let lon=-180; lon<=180; lon+=LON_STEP){
+      let land = false;
+      for(let p=0;p<LAND.length;p++){ if(inPoly(lon,lat,LAND[p])){ land = true; break; } }
+      if(!land) continue;
+      let h = 0;
+      for(let k=0;k<COUNTRIES.length;k++){
+        const c = COUNTRIES[k];
+        const dx = (lon-c.lon)*Math.cos(lat*Math.PI/180), dy = lat-c.lat;
+        h += c.w * Math.exp(-(dx*dx+dy*dy)/(2*SIGMA*SIGMA));
+      }
+      dots.push({lon:lon,lat:lat,h:h});
+    }
+  }
+  const hmax = dots.reduce((m,d)=>Math.max(m,d.h),0) || 1;
+  dots.forEach(d=>{ d.t = Math.pow(d.h/hmax, 0.62); });
+  return dots;
+}
+
+const cvs = $("#worldmap"), ctx = cvs.getContext("2d"), tip = $("#maptip");
+let markers = [];
+
+function drawMap(){
+  const box = cvs.parentElement;
+  const W = Math.max(360, box.clientWidth - 20);
+  const H = Math.round(W * (LAT_TOP-LAT_BOT) / 360);
+  const dpr = window.devicePixelRatio || 1;
+  cvs.width = W*dpr; cvs.height = H*dpr;
+  cvs.style.width = W+"px"; cvs.style.height = H+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const X = lon => (lon+180)/360 * W;
+  const Y = lat => (LAT_TOP-lat)/(LAT_TOP-LAT_BOT) * H;
+
+  ctx.fillStyle = "#0A1215"; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle = "rgba(120,150,160,.055)"; ctx.lineWidth = 1;
+  for(let lon=-180;lon<=180;lon+=30){ ctx.beginPath(); ctx.moveTo(X(lon),0); ctx.lineTo(X(lon),H); ctx.stroke(); }
+  for(let lat=60;lat>=-40;lat-=30){ ctx.beginPath(); ctx.moveTo(0,Y(lat)); ctx.lineTo(W,Y(lat)); ctx.stroke(); }
+  ctx.strokeStyle = "rgba(120,150,160,.11)";
+  ctx.beginPath(); ctx.moveTo(0,Y(0)); ctx.lineTo(W,Y(0)); ctx.stroke();
+
+  if(!DOTS) DOTS = buildDots();
+  const cell = W/360*LON_STEP;
+  DOTS.forEach(d=>{
+    const t = d.t;
+    const r = cell*(0.30 + t*0.36);
+    if(t < 0.035){
+      ctx.fillStyle = "rgba(112,140,148,.30)";
+    }else{
+      const c = rampAt(t);
+      ctx.fillStyle = "rgba("+c[0]+","+c[1]+","+c[2]+","+(0.55+t*0.45).toFixed(3)+")";
+    }
+    ctx.beginPath(); ctx.arc(X(d.lon), Y(d.lat), Math.max(0.7,r), 0, Math.PI*2); ctx.fill();
+  });
+
+  markers = [];
+  const wmax = Math.max(...COUNTRIES.map(c=>c.w));
+  COUNTRIES.forEach(c=>{
+    const x = X(c.lon), y = Y(c.lat), r = 2.6 + Math.sqrt(c.w/wmax)*7.5;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.strokeStyle = "rgba(247,212,107,"+(0.24+0.42*c.w/wmax).toFixed(3)+")";
+    ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2);
+    ctx.fillStyle = "rgba(255,236,180,.85)"; ctx.fill();
+    markers.push({x:x,y:y,r:Math.max(r,9),c:c});
+  });
+
+  ctx.font = "500 10px 'IBM Plex Mono', monospace";
+  ctx.fillStyle = "rgba(226,234,231,.62)";
+  COUNTRIES.slice(0,8).forEach(c=>{
+    const x = X(c.lon), y = Y(c.lat);
+    ctx.textAlign = x > W-70 ? "right" : "left";
+    ctx.fillText(c.n, x + (x > W-70 ? -11 : 11), y+3.5);
+  });
+}
+
+function chainCount(name){ return CHAINS.filter(c=>c.actors.indexOf(name)>=0).length; }
+
+cvs.addEventListener("mousemove", e=>{
+  const b = cvs.getBoundingClientRect();
+  const mx = e.clientX-b.left, my = e.clientY-b.top;
+  let hit = null, best = 1e9;
+  markers.forEach(m=>{
+    const d = Math.hypot(m.x-mx, m.y-my);
+    if(d < m.r && d < best){ best = d; hit = m; }
+  });
+  if(hit){
+    tip.classList.add("on");
+    tip.style.left = (hit.x + cvs.offsetLeft) + "px";
+    tip.style.top  = (hit.y + cvs.offsetTop) + "px";
+    $(".n",tip).textContent = hit.c.n;
+    $(".d",tip).textContent = "出現次數 " + hit.c.w + " · 關聯鍊 " + chainCount(hit.c.n) + " 條";
+    cvs.style.cursor = "crosshair";
+  }else{
+    tip.classList.remove("on"); cvs.style.cursor = "default";
+  }
+});
+cvs.addEventListener("mouseleave", ()=>tip.classList.remove("on"));
+
+/* 首頁事件鍊表 */
+function renderDash(){
+  const rows = CHAINS.slice().sort((a,b)=>b.days-a.days);
+  $("#dashrows").innerHTML = rows.map(c=>
+    '<tr data-id="'+c.id+'">'+
+      '<td class="cid">'+c.id+'</td>'+
+      '<td><div class="cname">'+esc(c.name)+'</div><div class="ctags">'+esc(c.region)+' · '+esc(c.actors.slice(0,3).join(" / "))+'</div></td>'+
+      '<td><span class="num">'+c.days+'</span> <span style="color:var(--faint);font-size:11px">日</span>'+
+        '<div class="lenbar"><i style="width:'+(c.days/maxDays*100).toFixed(1)+'%"></i></div></td>'+
+      '<td>'+chipHTML(c.status)+'</td>'+
+      '<td><div class="prob" style="color:'+probColor(c.prob)+'">'+c.prob+'%</div><div class="word">'+c.wording+'</div></td>'+
+      '<td style="max-width:330px;font-size:12.5px;color:var(--muted);line-height:1.6">'+esc(c.summary)+'</td>'+
+    '</tr>').join("");
+  $$("#dashrows tr").forEach(tr=>tr.addEventListener("click",()=>{ go("chains"); openChain(tr.dataset.id); }));
+}
+
+/* ════════════ 頁二:總表 + 細節 ════════════ */
+const REGIONS = Array.from(new Set(CHAINS.map(c=>c.region)));
+let filt = {status:"all", region:"all", q:""};
+
+function buildFilters(){
+  const sBtns = [["all","全部"]].concat(Object.keys(STATUS).map(k=>[k,STATUS[k].lab]));
+  $("#f-status").insertAdjacentHTML("beforeend", sBtns.map(([k,l])=>
+    '<button class="pill" data-k="'+k+'" aria-pressed="'+(k==="all")+'">'+l+'</button>').join(""));
+  $("#f-region").insertAdjacentHTML("beforeend", [["all","全部"]].concat(REGIONS.map(r=>[r,r])).map(([k,l])=>
+    '<button class="pill" data-k="'+esc(k)+'" aria-pressed="'+(k==="all")+'">'+esc(l)+'</button>').join(""));
+
+  $$("#f-status .pill").forEach(b=>b.addEventListener("click",()=>{
+    filt.status=b.dataset.k;
+    $$("#f-status .pill").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+    renderChains();
+  }));
+  $$("#f-region .pill").forEach(b=>b.addEventListener("click",()=>{
+    filt.region=b.dataset.k;
+    $$("#f-region .pill").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+    renderChains();
+  }));
+  $("#f-q").addEventListener("input", e=>{ filt.q = e.target.value.trim(); renderChains(); });
+}
+
+function matches(c){
+  if(filt.status!=="all" && c.status!==filt.status) return false;
+  if(filt.region!=="all" && c.region!==filt.region) return false;
+  if(filt.q){
+    const hay = [c.name,c.id,c.region,c.summary].concat(c.actors,c.indicators,c.triggers).join(" ");
+    if(hay.indexOf(filt.q)<0) return false;
+  }
+  return true;
+}
+
+function renderChains(){
+  const rows = CHAINS.filter(matches).sort((a,b)=>b.days-a.days);
+  $("#fcount").textContent = "顯示 " + rows.length + " / " + CHAINS.length + " 條事件鍊";
+  $("#chainrows").innerHTML = rows.length ? rows.map(c=>
+    '<tr data-id="'+c.id+'">'+
+      '<td class="cid">'+c.id+'</td>'+
+      '<td><div class="cname">'+esc(c.name)+'</div><div class="ctags">'+esc(c.actors.join(" · "))+'</div></td>'+
+      '<td><span class="num">'+c.days+'</span><div class="lenbar"><i style="width:'+(c.days/maxDays*100).toFixed(1)+'%"></i></div></td>'+
+      '<td class="num" style="color:var(--muted)">v'+c.versions.length+'</td>'+
+      '<td>'+chipHTML(c.status)+'</td>'+
+      '<td><div class="prob" style="color:'+probColor(c.prob)+'">'+c.prob+'%</div><div class="word">'+c.wording+'</div></td>'+
+      '<td class="cid">'+c.window+'</td>'+
+    '</tr>').join("")
+    : '<tr style="cursor:default"><td colspan="7" style="color:var(--faint);padding:26px 14px">沒有符合條件的事件鍊。放寬篩選條件再試。</td></tr>';
+  $$("#chainrows tr[data-id]").forEach(tr=>tr.addEventListener("click",()=>openChain(tr.dataset.id)));
+}
+
+function openChain(id){
+  const c = CHAINS.find(x=>x.id===id);
+  if(!c) return;
+  const latest = c.versions[c.versions.length-1];
+  $("#chains-detail").innerHTML =
+   '<button class="back" id="backbtn">← 返回事件鍊總表</button>'+
+   '<div class="dhead">'+
+     '<span class="cid">'+c.id+'</span> '+chipHTML(c.status)+
+     '<h3>'+esc(c.name)+'</h3>'+
+     '<div class="dfacts">'+
+       '<div class="dfact"><div class="k">鍊齡</div><div class="v">'+c.days+' 日</div></div>'+
+       '<div class="dfact"><div class="k">建立</div><div class="v">'+c.start+'</div></div>'+
+       '<div class="dfact"><div class="k">驗證視窗</div><div class="v">'+c.window+'</div></div>'+
+       '<div class="dfact"><div class="k">最新機率</div><div class="v" style="color:'+probColor(c.prob)+'">'+c.prob+'% <span style="font-size:11px;color:var(--muted)">'+c.wording+'</span></div></div>'+
+       '<div class="dfact"><div class="k">版本鏈</div><div class="v">v'+c.versions.length+'</div></div>'+
+       '<div class="dfact"><div class="k">區域</div><div class="v" style="font-size:12.5px">'+esc(c.region)+'</div></div>'+
+     '</div>'+
+   '</div>'+
+   '<div class="dcols">'+
+     '<div class="panel">'+
+       '<div class="panel-h"><h3>事件時間線</h3><span class="note">訊號 / 快照 / 處置 A·B·C·D / 結案</span></div>'+
+       '<div class="timeline"><div class="tl">'+ c.timeline.map(t=>
+         '<div class="tlitem" data-k="'+t.k+'"><div class="when">'+t.d+'<b>'+t.k+'</b></div>'+
+         '<div class="what">'+esc(t.t)+(t.delta?'<span class="delta">'+t.delta+'</span>':'')+'</div></div>').join("")+
+       '</div></div>'+
+       '<div class="lists" style="border-top:1px solid var(--line-soft)">'+
+         '<h4>觀測指標</h4><ul>'+c.indicators.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul>'+
+         '<h4>觸發條件</h4><ul>'+c.triggers.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul>'+
+         '<h4>關鍵假設</h4><ul>'+c.assumptions.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul>'+
+       '</div>'+
+     '</div>'+
+     '<div class="panel">'+
+       '<div class="panel-h"><h3>對應預測項目</h3><span class="note">版本鏈 · 歷史快照不可覆蓋</span></div>'+
+       c.versions.slice().reverse().map(v=>
+         '<div class="vcard'+(v.st==="latest"?" latest":"")+'">'+
+           '<div class="vrow"><span class="vid">'+v.id+'</span>'+
+             '<span class="vstat'+(v.st==="latest"?" latest":"")+'">'+v.st+'</span>'+
+             '<span class="vp" style="color:'+probColor(v.prob)+'">'+v.prob+'%</span></div>'+
+           '<div class="vrow" style="margin-top:4px"><span class="vid">'+v.date+' · v'+v.v+'</span>'+
+             '<span style="margin-left:auto;font-size:11.5px;color:var(--muted)">'+v.word+'</span></div>'+
+           '<div class="vnote">'+esc(v.note)+'</div>'+
+         '</div>').join("")+
+       '<div class="lists" style="border-top:1px solid var(--line-soft)">'+
+         '<h4>相關行為者</h4>'+
+         '<div class="linkchips">'+c.actors.map(a=>'<button class="linkchip" data-actor="'+esc(a)+'">'+esc(a)+'</button>').join("")+'</div>'+
+         '<h4 style="margin-top:18px">近況摘要</h4>'+
+         '<p style="margin:0;font-size:13px;color:var(--muted);line-height:1.75">'+esc(c.summary)+'</p>'+
+       '</div>'+
+     '</div>'+
+   '</div>';
+  $("#chains-list").style.display="none";
+  $("#chains-detail").style.display="block";
+  $("#crumb").textContent = "事件鍊 · " + c.id;
+  $("#backbtn").addEventListener("click", closeChain);
+  $$("#chains-detail .linkchip").forEach(b=>b.addEventListener("click",()=>{
+    const p = COUNTRY_PROFILES.findIndex(x=>x.n===b.dataset.actor);
+    if(p>=0){ go("countries"); selectCountry(p); }
+  }));
+  window.scrollTo({top:0,behavior:"instant"});
+}
+function closeChain(){
+  $("#chains-detail").style.display="none";
+  $("#chains-list").style.display="block";
+  $("#crumb").textContent = CRUMB.chains;
+}
+
+/* ════════════ 頁三:國家利益背景 ════════════ */
+function renderCountryList(){
+  $("#clist").innerHTML = COUNTRY_PROFILES.map((p,i)=>
+    '<button data-i="'+i+'" aria-pressed="'+(i===0)+'"><span class="cn">'+esc(p.n)+'</span>'+
+    '<span class="cm">'+p.chains.length+' 條關聯鍊</span></button>').join("");
+  $$("#clist button").forEach(b=>b.addEventListener("click",()=>selectCountry(+b.dataset.i)));
+}
+function selectCountry(i){
+  const p = COUNTRY_PROFILES[i];
+  $$("#clist button").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.i===i)));
+  $("#cbody").innerHTML =
+    '<h3>'+esc(p.n)+'</h3><div class="role">'+esc(p.role)+'</div>'+
+    '<div class="csec"><h4>核心利益與戰略目標</h4><p>'+esc(p.core)+'</p></div>'+
+    '<div class="csec"><h4>利益排序(衝突時的讓步順序)</h4><ol class="ordered">'+
+      p.priority.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ol></div>'+
+    '<div class="csec"><h4>紅線與底線</h4><ul class="redline">'+
+      p.redline.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div>'+
+    '<div class="csec"><h4>制度與法律約束(SKILL-15)</h4><p>'+esc(p.constraint)+'</p></div>'+
+    '<div class="csec"><h4>判讀偏誤警告(紀律 15)</h4><p>'+esc(p.bias)+'</p></div>'+
+    '<div class="csec"><h4>本期與基準的偏差</h4><p>'+esc(p.drift)+'</p></div>'+
+    '<div class="csec"><h4>關聯事件鍊</h4><div class="linkchips">'+
+      p.chains.map(id=>{
+        const c = CHAINS.find(x=>x.id===id);
+        return '<button class="linkchip" data-chain="'+id+'">'+id+' · '+esc(c?c.name.slice(0,14):"")+'…</button>';
+      }).join("")+'</div></div>';
+  $$("#cbody .linkchip").forEach(b=>b.addEventListener("click",()=>{ go("chains"); openChain(b.dataset.chain); }));
+}
+
+/* ════════════ 啟動 ════════════ */
+buildFilters();
+renderDash();
+renderChains();
+renderCountryList();
+selectCountry(0);
+drawMap();
+let rt;
+window.addEventListener("resize", ()=>{ clearTimeout(rt); rt = setTimeout(drawMap, 140); });
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawMap);
+</script>
