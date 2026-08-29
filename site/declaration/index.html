@@ -30,6 +30,9 @@ var noTraj=R.filter(function(r){return !r.tr.length;});
 var closedNoOc=R.filter(function(r){return r.closed&&!r.oc;});
 var inconsist=R.filter(function(r){return !r.closed&&r.oc;});
 var importDay=R.filter(function(r){return r.c0===IA.IMPORT_DAY;});
+var byStmt={};R.forEach(function(r){(byStmt[r.stmt]=byStmt[r.stmt]||[]).push(r);});
+var dupSets=Object.keys(byStmt).filter(function(k){return byStmt[k].length>1;}).map(function(k){return byStmt[k];});
+var dupChains=dupSets.reduce(function(s,a){return s+a.length;},0);
 var overconf=R.filter(function(r){return r.p>=90;});
 var resOver=IA.scored.filter(function(r){return r.p>=80;});
 var resUnder=IA.scored.filter(function(r){return r.p<=35;});
@@ -105,7 +108,15 @@ main.innerHTML =
    '那是重新匯入的日期,不是首次提出的日期。任何以建立日期算出的「鏈齡」都會把這些鏈算得比實際年輕。'+
    '本站因此不呈現鏈齡,改列驗證窗口,並在該列標記〈建立日為匯入日〉。',
    '回填真實首發日期','mid')+
- (nonStep.length?gap('缺口 7|'+nonStep.length+' 條鏈的機率不是 5% 步進',
+ (dupSets.length?gap('缺口 7|'+dupSets.length+' 組命題完全重複,共 '+dupChains+' 條鏈',
+   '有 '+dupSets.length+' 組鏈的命題文字<b>一字不差</b>,卻是各自獨立的鏈根,各有各的機率與驗證窗口。'+
+   dupSets.map(function(a){return '「'+esc(a[0].stmt)+'」——'+a.map(function(r){
+     return esc(r.cid)+' '+r.p+'%';}).join('、');}).join(';')+'。'+
+   '同一個命題被登錄兩次而機率不同,代表其中至少有一個判斷沒有被另一個更新到;'+
+   '若兩條都結案,同一件事會在校準分母裡被算兩次。'+
+   '<b>這一項是逐條複核 200 條鏈時發現的,不是原本就知道的。</b>',
+   '合併為同一鏈根,或說明兩者的判準差異何在','mid'):'')+
+ (nonStep.length?gap('缺口 8|'+nonStep.length+' 條鏈的機率不是 5% 步進',
    '紀律 6 要求機率以 5% 步進登錄,以便 Brier 校準分組。目前有 '+nonStep.length+' 條違反('+
    nonStep.map(function(r){return esc(r.cid)+" "+r.p+"%";}).join("、")+')。',
    '四捨五入到最近的 5%,並在版本說明註記修正','low'):'')+

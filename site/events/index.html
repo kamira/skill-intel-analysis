@@ -24,6 +24,8 @@ var IA=window.IA, R=IA.R, esc=IA.esc, G=IA.groups();
 var main=IA.chrome({section:"事件鍊",here:"events/",depth:1,note:"主要事件清單",kind:"索引"});
 var declared=G.edges.filter(function(e){return e[2]==="declared";}).length;
 var inferred=G.edges.length-declared;
+var OV=window.TOPIC_OVERRIDES||{};
+var ovN=Object.keys(OV).length;
 
 main.innerHTML =
  IA.head("事件鍊","一個主要事件 · 底下的後果分支 · 每條分支是一串續鏈")+
@@ -54,11 +56,32 @@ main.innerHTML =
  '<p class="mk-note"><b>「多鏈分支」是這一頁最值得看的一欄。</b>它數的是被續鏈串起來、'+
  '跨越至少一次結案的分支——那些才是真的持續了一段時間的判斷。'+
  '只有一條鏈的分支多半是開了一次就沒有下文,不論它現在的機率是多少。</p>'+
+ IA.head("歸屬是怎麼決定的","關鍵詞做大宗 · 人工複核收例外")+
+ '<div class="dcl-panel-flush"><div class="mk-sec"><ul>'+
+   '<li><b>後果分支</b>由續鏈宣告與 ID 慣例配對決定,不受關鍵詞影響。'+
+     '一條分支整體屬於哪個主要事件,由它底下的鏈投票決定;平手時取最新那條鏈的主題。</li>'+
+   '<li><b>主要事件</b>由關鍵詞比對決定。關鍵詞做得了大宗,做不了「這句話真正在講什麼」。</li>'+
+   '<li><b>已逐條複核全部 '+R.length+' 條</b>,挑出 '+ovN+' 條關鍵詞判錯的,列在 '+
+     '<code>topics.js</code> 的例外表並附理由。寫成表而不是去扭曲關鍵詞,'+
+     '是因為扭曲關鍵詞會連帶影響沒被檢查過的鏈,而例外表的影響範圍是可數的。</li>'+
+ '</ul></div></div>'+
+ '<div class="dcl-table-scroll" style="margin-top:14px"><table class="mk-t">'+
+ '<thead><tr><th>鏈</th><th>改判為</th><th>理由</th></tr></thead><tbody>'+
+ Object.keys(OV).map(function(cid){
+   var t=(window.TOPICS.find(function(x){return x[0]===OV[cid][0];})||[,OV[cid][0]])[1];
+   return '<tr class="is-link" data-c="'+esc(cid)+'"><td><span class="mk-id">'+esc(cid)+'</span></td>'+
+     '<td>'+esc(t)+'</td><td class="mk-stmt">'+esc(OV[cid][1])+'</td></tr>';}).join("")+
+ '</tbody></table></div>'+
+ '<p class="mk-note">剩下的 '+(R.length-ovN)+' 條維持關鍵詞的判定。'+
+ '<b>「複核過」不等於「全對」</b>——複核的是我讀得出來的誤置,'+
+ '讀不出來的(例如兩個主題都說得通的鏈)沒有被改動,也沒有被標記。</p>'+
  '<p class="mk-note">目前只有一個主要事件整理了底下的新聞。'+
  '其餘的機率曲線是真的,推動它的新聞還沒被逐日對上——<b>列一份猜的新聞比空著更糟</b>。</p>';
 
 Array.prototype.forEach.call(main.querySelectorAll("tr[data-h]"),function(tr){
   tr.addEventListener("click",function(){location.href=tr.dataset.h;});});
+Array.prototype.forEach.call(main.querySelectorAll("tr[data-c]"),function(tr){
+  tr.addEventListener("click",function(){location.href="../chains/?c="+encodeURIComponent(tr.dataset.c);});});
 </script>
 </body>
 </html>
