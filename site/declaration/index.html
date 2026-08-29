@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分析缺口聲明 — 情報分析工作台</title>
+<meta name="description" content="這份帳本哪裡站得住、哪裡不要當真:學門涵蓋範圍(INT 矩陣)、資料完整性缺口、校準結果與最可能的錯誤方向。">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="../actors.js"></script>
+<script src="../disciplines.js"></script>
+<script src="../assets/chrome.js"></script>
+<script>
+"use strict";
+var IA=window.IA, R=IA.R, esc=IA.esc, L=IA.L, D=window.DISCIPLINES;
+var main=IA.chrome({section:"缺口聲明",here:"declaration/",depth:1,
+  note:"這份帳本哪裡站得住,哪裡不要當真",kind:"SKILL-11 步驟十"});
+
+var nonStep=R.filter(function(r){return r.p%5!==0;});
+var oldId=R.filter(function(r){return /^P-\d{4}-\d{2}$/.test(r.cid);});
+var noTrack=R.filter(function(r){return !r.track;});
+var brokenSeq=R.filter(function(r){return r.v>r.n;});
+var noTraj=R.filter(function(r){return !r.tr.length;});
+var closedNoOc=R.filter(function(r){return r.closed&&!r.oc;});
+var inconsist=R.filter(function(r){return !r.closed&&r.oc;});
+var importDay=R.filter(function(r){return r.c0===IA.IMPORT_DAY;});
+var overconf=R.filter(function(r){return r.p>=90;});
+var resOver=IA.scored.filter(function(r){return r.p>=80;});
+var resUnder=IA.scored.filter(function(r){return r.p<=35;});
+var pct=function(a){return a.length?Math.round(a.reduce(function(s,r){return s+r.ov;},0)/a.length*100)+"%":"—";};
+var inUse=D.items.filter(function(i){return i.status==="in-use";}).length;
+var incid=D.items.filter(function(i){return i.status==="incidental";}).length;
+var absent=D.items.filter(function(i){return i.status==="absent";}).length;
+
+function gap(title,body,why,imp){
+  var lab={high:["高","is-high"],mid:["中","is-mid"],low:["低","is-low"]}[imp];
+  return '<div class="mk-gap"><div class="mk-gap-b"><b>'+title+'</b>'+body+
+    (why?'<div class="mk-gap-why">可能填補方式:'+why+'</div>':'')+'</div>'+
+    '<div class="mk-imp '+lab[1]+'">影響<b>'+lab[0]+'</b></div></div>';
+}
+
+main.innerHTML =
+ '<div class="mk-hero"><div class="mk-hero-kicker">SKILL-11 分析缺口聲明 · 步驟十</div>'+
+   '<h1>這份帳本哪裡站得住,哪裡不要當真</h1>'+
+   '<p>不標記不確定性的分析是危險的:讀者會把所有判斷當成同等可靠。'+
+   '以下是這份帳本自己承認的問題,全部由本頁資料即時算出,不是人工挑選的。</p>'+
+   '<div class="mk-hero-meta">'+
+     '<div><span class="k">資料截止</span><span class="v">'+IA.ASOF+'</span></div>'+
+     '<div><span class="k">涵蓋</span><span class="v">'+R.length+' 鏈 / '+L.meta.snapshots+' 版</span></div>'+
+     '<div><span class="k">已計分</span><span class="v">'+IA.scored.length+'</span></div>'+
+     '<div><span class="k">整體信心水準</span><span class="v" style="color:var(--accent)">中</span></div>'+
+   '</div></div>'+
+
+ '<div class="mk-doc">'+
+
+ IA.head(D.heading, D.note)+
+ '<div class="dcl-legend">'+D.legend.map(function(l){
+   return '<span class="dcl-legend-item"><span class="dcl-swatch is-'+l[0]+'"></span>'+esc(l[1])+'</span>';}).join("")+'</div>'+
+ '<div class="dcl-cards">'+D.items.map(function(i){
+   return '<div class="dcl-card is-'+i.status+'">'+
+     '<div class="dcl-card-head"><span class="dcl-dot"></span>'+
+       '<span class="dcl-card-name">'+esc(i.name)+'</span></div>'+
+     '<div class="dcl-card-scope">'+esc(i.scope)+'</div>'+
+     '<div class="dcl-card-state">'+esc(i.state)+'</div>'+
+     '<div class="dcl-card-note">'+esc(i.note)+'</div></div>';}).join("")+'</div>'+
+ '<p class="mk-note"><b>'+D.items.length+' 個學門裡,真正在用的是 '+inUse+' 個。</b>'+
+   incid+' 個只在報導引用時偶發進入,'+absent+' 個完全缺席。'+
+   '這張矩陣列出全部而不是只列用得上的——只列使用中的學門,'+
+   '讀者會以為沒列的都不重要,而實際上缺席的那些正是核子、飛彈、談判狀態這類問題最薄弱的原因。</p>'+
+
+ '<h4><span>一</span>資料完整性缺口</h4>'+
+ gap('缺口 1|'+L.meta.unchained+' 版快照沒有鏈根',
+   '全帳本 '+L.meta.snapshots+' 版快照中,有 '+L.meta.unchained+' 版(約 '+
+   Math.round(L.meta.unchained/L.meta.snapshots*100)+'%)的「原始預測 ID」是空的,無法歸屬到任何一條鏈。'+
+   '這代表本站呈現的 '+R.length+' 條鏈<b>不是帳本的全部</b>,而且缺的那部分無法被統計。',
+   '回頭替這些快照補鏈根,或確認它們是被廢棄的草稿','high')+
+ gap('缺口 2|'+noTrack.length+' 條鏈沒有追蹤狀態',
+   R.length+' 條鏈中有 '+noTrack.length+' 條既沒結案也沒降階,停在空白狀態。'+
+   '在冷鏈規則下,「沒有訊號」與「沒有人去看」在帳本上長得一模一樣——'+
+   '這正是紀律 20「資訊真空 ≠ 維持機率」要防的事。',
+   '逐條補判 A/B/C/D 處置,或明確標記為棄鏈','high')+
+ gap('缺口 3|'+brokenSeq.length+' 條鏈的版本序大於可見快照數',
+   '有 '+oldId.length+' 條鏈採舊制 <code>P-MMDD-NN</code>,其餘採新制 <code>P-YYYY-MMDD-NN</code>。'+
+   '部分邏輯上連續的鏈因此被拆成兩個鏈根,版本序會超過該鏈根底下的快照數'+
+   (function(){var w=brokenSeq.slice().sort(function(a,b){return (b.v-b.n)-(a.v-a.n);})[0];
+     return w?'(最極端的是 '+esc(w.cid)+':版本序 v'+w.v+',可見快照 '+w.n+' 筆)':'';})()+'。'+
+   '總表因此印<b>可見快照數</b>而非版本序,並在該列標記〈序號斷裂〉。',
+   '合併鏈根並保留舊 ID 作為別名','mid')+
+ gap('缺口 4|'+noTraj.length+' 條鏈的逐版軌跡沒有匯出',
+   '這 '+noTraj.length+' 條鏈在本站畫不出機率曲線。<b>那不是「機率沒有動過」,是資料不在。</b>'+
+   '總表的「初始」欄對這些鏈印「初始未匯出」而不是留白。',
+   '重新匯出時帶上版本快照序列','mid')+
+ gap('缺口 5|'+closedNoOc.length+' 條已結案的鏈沒有登記結局,'+inconsist.length+' 條未結案卻有結局',
+   '前者是「已驗證／已失效」但結局欄為空;後者狀態仍是追蹤中卻已登記結局。'+
+   '兩者在舊版都被印成同一個破折號,與 '+IA.census.追蹤中+' 條正常追蹤中的鏈無從分辨。'+
+   '現在空值一律具名:「結案未記錄結果」與「尚未結案」是兩件事。',
+   '補登結局,或把狀態改回追蹤中','mid')+
+ gap('缺口 6|'+importDay.length+' 條鏈的建立日期同為 '+IA.IMPORT_DAY,
+   '那是重新匯入的日期,不是首次提出的日期。任何以建立日期算出的「鏈齡」都會把這些鏈算得比實際年輕。'+
+   '本站因此不呈現鏈齡,改列驗證窗口,並在該列標記〈建立日為匯入日〉。',
+   '回填真實首發日期','mid')+
+ (nonStep.length?gap('缺口 7|'+nonStep.length+' 條鏈的機率不是 5% 步進',
+   '紀律 6 要求機率以 5% 步進登錄,以便 Brier 校準分組。目前有 '+nonStep.length+' 條違反('+
+   nonStep.map(function(r){return esc(r.cid)+" "+r.p+"%";}).join("、")+')。',
+   '四捨五入到最近的 5%,並在版本說明註記修正','low'):'')+
+
+ '<h4><span>二</span>校準結果</h4>'+
+ '<p>已計分 '+IA.scored.length+' 題,命中率 '+Math.round(IA.hitRate*100)+'%,Brier '+IA.brier.toFixed(4)+'。'+
+ '<b>兩個必須先講的前提:</b>分母是已計分的 '+IA.scored.length+' 條而不是 '+R.length+' 條;'+
+ '而算式用的是<b>最新機率</b>而不是結案當下的機率——機率常在結案前才被調到接近結果,所以這個分數偏好。'+
+ '總分會騙人,真正有資訊的是敢押的那些題:</p>'+
+ '<div class="dcl-table-scroll"><table class="mk-t">'+
+ '<thead><tr><th>分組</th><th>題數</th><th>實際發生率</th><th>讀法</th></tr></thead><tbody>'+
+ '<tr><td>高信心(≥80%)</td><td class="mk-num">'+resOver.length+'</td><td class="mk-num">'+pct(resOver)+'</td>'+
+   '<td>若實際發生率明顯低於機率中位數,代表過度自信</td></tr>'+
+ '<tr><td>低信心(≤35%)</td><td class="mk-num">'+resUnder.length+'</td><td class="mk-num">'+pct(resUnder)+'</td>'+
+   '<td>若明顯高於機率,代表低估</td></tr>'+
+ '<tr><td>目前仍押 ≥90%</td><td class="mk-num">'+overconf.length+'</td><td class="dcl-empty">尚未結案</td>'+
+   '<td>紀律 17:≥90% 須通過可改寫性測試</td></tr>'+
+ '</tbody></table></div>'+
+
+ '<h4><span>三</span>最可能的錯誤方向</h4>'+
+ '<div class="mk-wrongway"><p>如果這份帳本的校準數字錯了,最可能錯在:<b>已計分的那 '+IA.scored.length+
+ ' 題不是隨機樣本</b>。會被結案的通常是窗口明確、判準乾淨的題;'+noTrack.length+
+ ' 條停在空白狀態的鏈很可能正是難判的那些,而它們完全沒有進到分母。</p>'+
+ '<p>為什麼這個方向最容易出錯:它讓命中率與 Brier 同時往好的方向偏,而且偏得很安靜——'+
+ '分子分母都只算「有結論的題」,看起來完全合理,直到你問一句「那沒結論的呢」。</p></div>'+
+
+ '<h4><span>四</span>公開範圍的自我限制</h4>'+
+ '<div class="mk-selfcheck">'+
+   '<div><div class="t">已公開</div><div class="r">鏈層摘要</div>'+
+     '<div class="d">命題、機率、機率軌跡、狀態、影響面、驗證窗口、結局。</div></div>'+
+   '<div><div class="t">未公開</div><div class="r is-flag">判準與推理</div>'+
+     '<div class="d">建鏈理由、回測推理與判準正文留在原帳本,不隨本站發佈。</div></div>'+
+   '<div><div class="t">未公開</div><div class="r is-flag">利益卡片條文</div>'+
+     '<div class="d">國家背景基準頁只呈現卡片的結構與完整度,不呈現各節的實際內容。</div></div>'+
+   '<div><div class="t">推導而非原始</div><div class="r is-flag">行為者與國家歸屬</div>'+
+     '<div class="d">帳本沒有國家欄位,地圖與行為者關聯由命題文字比對推得,會有漏判與誤判。</div></div>'+
+ '</div>'+
+
+ '<div class="mk-foot">本頁為研判紀錄的公開檢視,<b>不構成投資、法律或任何決策建議</b>。'+
+ '機率為主觀判斷的登錄值,不是事件的客觀發生率。<br>'+
+ '資料來源:作者自建之預測驗證資料庫,匯出於 '+IA.ASOF+'。'+
+ '方法論見 skills/intel-analysis(SKILL-01…20,23 條核心紀律)。</div>'+
+ '</div>';
+</script>
+</body>
+</html>

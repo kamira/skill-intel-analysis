@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>美伊衝突 — 事件鍊</title>
+<meta name="description" content="美伊衝突事件鍊:四種後果的機率曲線畫在同一組座標上,底下是推動它們的新聞。">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/console.css">
+</head>
+<body>
+<script src="../../data.js"></script>
+<script src="../../actors.js"></script>
+<script src="../../events.js"></script>
+<script src="../../assets/chrome.js"></script>
+<script>
+"use strict";
+var IA=window.IA, R=IA.R, esc=IA.esc, A=window.ACTORS;
+var EV=window.EVENTS.find(function(e){return e.id==="us-iran";});
+var main=IA.chrome({section:"事件鍊",here:"events/",depth:2,
+  note:"一個主要事件、底下的新聞,以及它推動的每一種後果",kind:"事件鍊"});
+
+var S=EV.outcomes.map(function(o){
+  var r=R.find(function(x){return x.cid===o.chain;});
+  return {label:o.label,color:o.color,chain:o.chain,r:r,pts:r?r.tr:[]};
+}).filter(function(s){return s.r;});
+
+var DAY=86400000, t0=IA.T(EV.window[0]), t1=IA.T(EV.window[1]), span=(t1-t0)/DAY;
+var W=980,H=380,PL=42,PR=16,PT=30,PB=54;
+function x(d){return PL+(W-PL-PR)*((IA.T(d)-t0)/DAY)/span;}
+function y(p){return PT+(H-PT-PB)*(1-p/100);}
+
+var grid=[0,25,50,75,100].map(function(gv){
+  return '<line class="mk-grid-line" x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y(gv).toFixed(1)+'" y2="'+y(gv).toFixed(1)+'"/>'+
+    '<text class="mk-axis-t" x="'+(PL-8)+'" y="'+(y(gv)+3).toFixed(1)+'" text-anchor="end">'+gv+'%</text>';}).join("");
+var ticks="";
+for(var k=0;k<=span;k+=7){
+  var d=new Date(t0+k*DAY).toISOString().slice(0,10);
+  ticks+='<text class="mk-axis-t" x="'+x(d).toFixed(1)+'" y="'+(H-PB+30)+'" text-anchor="middle">'+d.slice(5)+'</text>';
+}
+var markers=EV.news.map(function(n,i){
+  var px=x(n.d).toFixed(1);
+  return '<line class="mk-marker" x1="'+px+'" x2="'+px+'" y1="'+(PT-6)+'" y2="'+(H-PB)+'"/>'+
+    '<text class="mk-marker-n" x="'+px+'" y="'+(PT-12)+'">'+(i+1)+'</text>'+
+    '<rect class="mk-marker-hit" x="'+(px-7)+'" y="'+(PT-20)+'" width="14" height="'+(H-PB-PT+22)+'">'+
+    '<title>'+(i+1)+'. '+esc(n.d)+' '+esc(n.t)+'</title></rect>';}).join("");
+var lines=S.map(function(s){
+  var pts=s.pts.filter(function(p){return IA.T(p.d)>=t0&&IA.T(p.d)<=t1;});
+  if(!pts.length) return "";
+  var d=pts.map(function(p,i){return (i?"L":"M")+" "+x(p.d).toFixed(1)+" "+y(p.p).toFixed(1);}).join(" ");
+  var dots=pts.map(function(p){
+    return '<circle cx="'+x(p.d).toFixed(1)+'" cy="'+y(p.p).toFixed(1)+'" r="2.4" fill="'+s.color+'">'+
+      '<title>'+esc(s.label)+' · '+esc(p.d)+' · '+p.p+'%</title></circle>';}).join("");
+  return '<path class="mk-series" d="'+d+'" stroke="'+s.color+'"/>'+dots;}).join("");
+var legend=S.map(function(s){
+  var f=s.pts[0], l=s.pts[s.pts.length-1];
+  return '<span class="mk-lg"><i style="background:'+s.color+'"></i>'+esc(s.label)+' <b>'+s.r.p+'%</b>'+
+    '<small>'+f.p+'% → '+l.p+'% · '+esc(s.chain)+' · '+s.pts.length+' 版</small></span>';}).join("");
+
+var newsRows=EV.news.map(function(n,i){
+  var chips=S.map(function(s){
+    var a=IA.atDate(s.pts,n.d);
+    if(!a) return '<span class="mk-dot is-hold" title="'+esc(s.label)+':當日無此鏈版本"><i style="background:#2b3542"></i>—</span>';
+    var lab=a.prev===null?"首發":a.cur===a.prev?"維持":(a.cur>a.prev?"+":"")+(a.cur-a.prev);
+    var cls=a.prev===null?"is-hold":a.cur>a.prev?"is-up":a.cur<a.prev?"is-down":"is-hold";
+    return '<span class="mk-dot '+cls+'" title="'+esc(s.label)+'"><i style="background:'+s.color+'"></i>'+lab+'</span>';
+  }).join("");
+  return '<div class="mk-news-row"><span class="mk-news-n">'+(i+1)+'</span>'+
+    '<span class="mk-news-d">'+esc(n.d)+'</span>'+
+    '<span class="mk-news-t">'+esc(n.t)+'</span>'+
+    '<span class="mk-news-x">'+chips+'</span></div>';}).join("");
+
+/* 讀圖重點:兩條指定鏈在兩個指定日期的變動,由資料算出,不手寫 */
+function at(cid,date){
+  var s=S.find(function(z){return z.chain===cid;}); if(!s) return null;
+  var a=IA.atDate(s.pts,date); if(!a) return null;
+  a.label=s.label; return a;
+}
+var ra=EV.readAs, a1=at(ra.pair[0],ra.dates[0]), b1=at(ra.pair[1],ra.dates[0]),
+    a2=at(ra.pair[0],ra.dates[1]), b2=at(ra.pair[1],ra.dates[1]);
+var readNote="";
+if(a1&&b1&&a2&&b2){
+  readNote='<p class="mk-note"><b>讀這張圖只需要看一件事:'+esc(a1.label)+'與'+esc(b1.label)+'是反向的。</b>'+
+    esc(ra.dates[0])+'「'+esc(EV.news.find(function(n){return n.d===ra.dates[0];}).t.split("、")[0])+'」當天,'+
+    esc(a1.label)+'由 '+a1.prev+'% 落到 '+a1.cur+'%、'+esc(b1.label)+'由 '+b1.prev+'% 升到 '+b1.cur+'%;'+
+    esc(ra.dates[1])+'當天兩條線同時折返——'+a2.prev+'% → '+a2.cur+'%、'+b2.prev+'% → '+b2.cur+'%。'+
+    '這四個數字是這一頁存在的理由。</p>';
+}
+
+var cards=EV.actors.map(function(name){
+  var c=A.cards.find(function(z){return z.name===name;});
+  if(!c) return "";
+  var filled=c.n.filter(function(v){return v>0;}).length;
+  return '<a class="mk-card is-'+c.status+'" href="../../actors/#'+encodeURIComponent(c.name)+'">'+
+    '<div class="mk-card-h"><span class="mk-card-flag">'+c.flag+'</span><span class="mk-card-n">'+esc(c.name)+'</span></div>'+
+    '<div class="mk-cov">'+c.n.map(function(v){return '<i class="'+(v>0?"on":"")+'"></i>';}).join("")+'</div>'+
+    '<div class="mk-cov-lab">利益卡片 '+filled+'/8 節 · '+c.n.reduce(function(s,v){return s+v;},0)+' 條</div></a>';}).join("");
+var thin=EV.actors.map(function(n){return A.cards.find(function(z){return z.name===n;});})
+  .filter(Boolean).sort(function(a,b){return a.n.filter(function(v){return v>0;}).length-b.n.filter(function(v){return v>0;}).length;})[0];
+
+main.innerHTML =
+ '<div class="mk-hero"><div class="mk-hero-kicker">主要事件</div>'+
+   '<h1>'+esc(EV.title)+'</h1><p>'+esc(EV.subtitle)+'</p>'+
+   '<div class="mk-hero-meta">'+
+     '<div><span class="k">期間</span><span class="v">'+EV.window[0]+' → '+EV.window[1]+'</span></div>'+
+     '<div><span class="k">後果分支</span><span class="v">'+S.length+'</span></div>'+
+     '<div><span class="k">底下的新聞</span><span class="v">'+EV.news.length+'</span></div>'+
+     '<div><span class="k">版本合計</span><span class="v">'+S.reduce(function(s,o){return s+o.pts.length;},0)+'</span></div>'+
+   '</div></div>'+
+ '<div class="mk-lede"><p><b>一個主要事件,底下掛著同一段時間的新聞;每一則新聞同時推動好幾種後果的機率。</b>'+
+   '所以這一頁只有一張折線圖——'+S.length+' 種後果全部畫在同一組座標上。分開畫會看不見唯一重要的那件事:'+
+   '同一天,一條往下、另一條往上。</p></div>'+
+
+ IA.head("機率隨時間變化","共用一組座標 · 虛線為新聞事件,編號對應下方清單")+
+ '<div class="dcl-panel-flush mk-chartbox">'+
+   '<svg class="mk-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(EV.title)+'的 '+S.length+
+     ' 種後果機率折線圖,期間 '+EV.window[0]+' 至 '+EV.window[1]+'">'+grid+ticks+markers+lines+'</svg>'+
+   '<div class="mk-legend">'+legend+'</div>'+
+ '</div>'+ readNote +
+
+ IA.head("底下的新聞","每一則對各後果當日的機率變動")+
+ '<div class="mk-news">'+newsRows+'</div>'+
+ '<p class="mk-note">新聞為每日國際觀點的當日頁標題;機率變動取自帳本各鏈的版本快照。'+
+   '「維持」代表該鏈當天有登錄新版本但機率沒動——那是判斷,不是沒看。「—」代表該鏈當天沒有版本。'+
+   '同一天登錄兩版時,這一欄取當天最後一版;圖上則兩版都畫,呈現為一段垂直線。</p>'+
+
+ IA.head("後果分支","每一條對應帳本裡的一條預測鏈")+
+ '<div class="dcl-table-scroll"><table class="mk-t">'+
+   '<thead><tr><th>後果</th><th>命題</th><th>鏈</th><th>狀態</th><th>初始 → 最新</th><th>驗證窗口</th></tr></thead><tbody>'+
+   S.map(function(s){
+     return '<tr class="is-link is-'+IA.stCls(s.r)+'" data-id="'+esc(s.chain)+'">'+
+       '<td><span class="mk-dot"><i style="background:'+s.color+'"></i></span> '+esc(s.label)+'</td>'+
+       '<td class="mk-stmt">'+esc(s.r.stmt)+'</td>'+
+       '<td><span class="mk-id">'+esc(s.chain)+'</span></td>'+
+       '<td><span class="mk-state is-'+IA.stCls(s.r)+'">'+esc(IA.stLab(s.r))+'</span></td>'+
+       '<td class="mk-num">'+s.pts[0].p+'% → <b>'+s.r.p+'%</b></td>'+
+       '<td class="mk-num">'+(s.r.ws||"未記錄")+' → '+(s.r.we||"未記錄")+'</td></tr>';}).join("")+
+ '</tbody></table></div>'+
+
+ IA.head("涉入的行為者","點進去是該行為者的利益卡片結構")+
+ '<div class="mk-cards">'+cards+'</div>'+
+ (thin ? '<p class="mk-note"><b>'+esc(thin.name)+'的利益卡片只有 8 節裡的 '+
+   thin.n.filter(function(v){return v>0;}).length+' 節。</b>它是這個事件鍊的當事方,'+
+   '卻是這四張卡片裡最薄的一張。這件事必須在畫面上看得出來,不能只寫在頁尾——'+
+   '讀者對它行為的解讀,正好是最沒有基準可靠的那一個。</p>' : '');
+
+Array.prototype.forEach.call(main.querySelectorAll("tr[data-id]"),function(tr){
+  tr.addEventListener("click",function(){location.href="../../chains/?c="+encodeURIComponent(tr.dataset.id);});});
+</script>
+</body>
+</html>

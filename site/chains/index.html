@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>預測鏈總表 — 情報分析工作台</title>
+<meta name="description" content="帳本中的每一條預測鏈,包含判斷錯誤與狀態未記錄的。沒有預設篩選。">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="../actors.js"></script>
+<script src="../assets/chrome.js"></script>
+<script>
+"use strict";
+var IA=window.IA, R=IA.R, esc=IA.esc, L=IA.L;
+var main=IA.chrome({section:"預測鏈",here:"chains/",depth:1,
+  note:"同一句命題的逐版修訂 · 每一條鏈,包含判斷錯誤的",kind:"完整清單"});
+
+var DOMS=Array.from(new Set(R.reduce(function(a,r){return a.concat(r.domA);},[]))).sort();
+var filt={st:"all",dom:"all",q:""};
+
+function denominator(){
+  return '<div class="dcl-panel-flush" style="padding:15px 17px;display:flex;flex-direction:column;gap:10px">'+
+    '<span class="mk-score-k">分母</span>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:9px 24px">'+
+      Object.keys(IA.census).map(function(k){
+        return '<span style="display:inline-flex;align-items:baseline;gap:7px">'+
+          '<span class="mk-score-v" style="font-size:17px">'+IA.census[k]+'</span>'+
+          '<span class="mk-score-k">'+k+'</span></span>';}).join("")+
+      '<span style="display:inline-flex;align-items:baseline;gap:7px">'+
+        '<span class="mk-score-v" style="font-size:17px">'+IA.brier.toFixed(4)+'</span>'+
+        '<span class="mk-score-k">Brier</span></span>'+
+    '</div></div>';
+}
+
+function listView(){
+  return IA.head("預測鏈","沒有預設篩選 · 已失效與狀態未記錄的鏈與其他鏈一同列出")+
+   '<div class="mk-lede"><p><b>這一頁列的是「預測鏈」——同一句命題的版本鏈快照,不是事件之間的連鎖反應。</b>'+
+   '事件與事件的關係在<a href="../events/">事件鍊</a>。</p></div>'+
+   denominator()+
+   IA.head("全部 "+R.length+" 條","依最後修訂排序 · 點擊列看該鏈的機率軌跡")+
+   '<div class="mk-filters">'+
+     '<div class="mk-fgroup" id="f-st"><span>狀態</span></div>'+
+     '<div class="mk-fgroup" id="f-dom"><span>影響面</span></div>'+
+     '<div class="mk-search"><span style="font-size:10px;color:var(--muted-2)">/</span>'+
+       '<input id="f-q" type="search" placeholder="搜尋命題或鏈 ID…"></div>'+
+   '</div>'+
+   '<div class="mk-fcount" id="fcount"></div>'+
+   '<div class="dcl-table-scroll"><table class="mk-t">'+
+     '<thead><tr><th>鏈</th><th>陳述句</th><th>影響面</th><th>可見快照</th>'+
+       '<th>初始 → 最新</th><th>狀態</th><th>結局</th><th>驗證窗口</th></tr></thead>'+
+     '<tbody id="rows"></tbody></table></div>';
+}
+
+function rowHTML(r){
+  var versions=(r.v===r.n)?String(r.n):(r.n+'<span class="mk-vseq">／序 v'+r.v+'</span>');
+  return '<tr class="is-link is-'+IA.stCls(r)+'" data-id="'+esc(r.cid)+'">'+
+    '<td><span class="mk-id">'+esc(r.cid)+'</span></td>'+
+    '<td class="mk-stmt">'+esc(r.stmt)+IA.flagChips(r)+'</td>'+
+    '<td>'+(r.domA.length?r.domA.map(function(d){return '<span class="dcl-domain">'+esc(d)+'</span>';}).join(""):'<span class="dcl-empty">未記錄</span>')+'</td>'+
+    '<td class="mk-num">'+versions+'</td>'+
+    '<td class="mk-num">'+IA.probCell(r)+'</td>'+
+    '<td><span class="mk-state is-'+IA.stCls(r)+'">'+esc(IA.stLab(r))+'</span></td>'+
+    '<td>'+IA.outcomeCell(r)+'</td>'+
+    '<td class="mk-num">'+(r.ws||"未記錄")+' → '+(r.we||"未記錄")+'</td></tr>';
+}
+
+function matches(r){
+  if(filt.st==="_none"){ if(r.track) return false; }
+  else if(filt.st!=="all" && r.track!==filt.st) return false;
+  if(filt.dom!=="all" && r.domA.indexOf(filt.dom)<0) return false;
+  if(filt.q && (r.stmt+" "+r.cid).indexOf(filt.q)<0) return false;
+  return true;
+}
+function renderRows(){
+  var rows=R.filter(matches).sort(function(a,b){return (IA.T(b.upd)||0)-(IA.T(a.upd)||0);});
+  document.getElementById("fcount").textContent="顯示 "+rows.length+" / "+R.length+" 條";
+  document.getElementById("rows").innerHTML = rows.length
+    ? rows.map(rowHTML).join("")
+    : '<tr><td colspan="8" class="dcl-empty" style="padding:24px 14px">沒有符合條件的鏈。放寬篩選條件再試。</td></tr>';
+  Array.prototype.forEach.call(document.querySelectorAll("#rows tr[data-id]"),function(tr){
+    tr.addEventListener("click",function(){open(tr.dataset.id);});});
+}
+
+function bindFilters(){
+  var sts=[["all","全部"],["追蹤中","追蹤中"],["待驗證","待驗證"],["休眠","休眠"],
+           ["已驗證","已驗證"],["已失效","已失效"],["_none","狀態未記錄"]];
+  document.getElementById("f-st").insertAdjacentHTML("beforeend",sts.map(function(x){
+    return '<button class="mk-pill" data-k="'+esc(x[0])+'" aria-pressed="'+(x[0]==="all")+'">'+esc(x[1])+'</button>';}).join(""));
+  document.getElementById("f-dom").insertAdjacentHTML("beforeend",
+    [["all","全部"]].concat(DOMS.map(function(d){return [d,d];})).map(function(x){
+      return '<button class="mk-pill" data-k="'+esc(x[0])+'" aria-pressed="'+(x[0]==="all")+'">'+esc(x[1])+'</button>';}).join(""));
+  function wire(sel,key){
+    Array.prototype.forEach.call(document.querySelectorAll(sel+" .mk-pill"),function(b){
+      b.addEventListener("click",function(){
+        filt[key]=b.dataset.k;
+        Array.prototype.forEach.call(document.querySelectorAll(sel+" .mk-pill"),function(x){
+          x.setAttribute("aria-pressed",String(x===b));});
+        renderRows();});});
+  }
+  wire("#f-st","st"); wire("#f-dom","dom");
+  document.getElementById("f-q").addEventListener("input",function(e){filt.q=e.target.value.trim();renderRows();});
+}
+
+/* ── 單鏈 ── */
+function stepChart(t,W,H){
+  if(t.length<2) return "";
+  var PL=40,PR=14,PT=22,PB=40, n=t.length;
+  var t0=IA.T(t[0].d), t1=IA.T(t[n-1].d), sp=(t1-t0)||1;
+  var x=function(i){return PL+(W-PL-PR)*((IA.T(t[i].d)-t0)/sp);};
+  var y=function(p){return PT+(H-PT-PB)*(1-p/100);};
+  var d="M "+x(0).toFixed(1)+" "+y(t[0].p).toFixed(1);
+  for(var i=1;i<n;i++) d+=" L "+x(i).toFixed(1)+" "+y(t[i-1].p).toFixed(1)+" L "+x(i).toFixed(1)+" "+y(t[i].p).toFixed(1);
+  var grid=[0,25,50,75,100].map(function(gv){
+    return '<line class="mk-grid-line" x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y(gv).toFixed(1)+'" y2="'+y(gv).toFixed(1)+'"/>'+
+      '<text class="mk-axis-t" x="'+(PL-7)+'" y="'+(y(gv)+3).toFixed(1)+'" text-anchor="end">'+gv+'%</text>';}).join("");
+  var dots=t.map(function(p,i){
+    var cls=i===0?"is-first":p.p>t[i-1].p?"is-up":p.p<t[i-1].p?"is-down":"is-hold";
+    return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.p).toFixed(1)+'" r="2.8" class="mk-pt '+cls+'" fill="#f0a24b">'+
+      '<title>v'+p.v+' '+esc(p.d||"日期未記錄")+' '+p.p+'%</title></circle>';}).join("");
+  var ends='<text class="mk-axis-t" x="'+PL+'" y="'+(H-PB+22)+'">'+esc(t[0].d)+'</text>'+
+    '<text class="mk-axis-t" x="'+(W-PR)+'" y="'+(H-PB+22)+'" text-anchor="end">'+esc(t[n-1].d)+'</text>';
+  return '<svg class="mk-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="共 '+n+
+    ' 個版本的階梯圖,起始 '+t[0].p+'%,目前 '+t[n-1].p+'%">'+grid+ends+
+    '<path class="mk-series" d="'+d+'" stroke="#f0a24b"/>'+dots+'</svg>';
+}
+
+function open(id){
+  var r=R.find(function(x){return x.cid===id;}); if(!r) return;
+  var t=r.tr, lo=t.length?Math.min.apply(null,t.map(function(x){return x.p;})):r.p,
+      hi=t.length?Math.max.apply(null,t.map(function(x){return x.p;})):r.p;
+  var chart=t.length>1 ? stepChart(t,860,240)
+    : '<div class="mk-void"><b>這條鏈畫不出階梯圖。</b>逐版機率沒有隨匯出帶出——不是「機率沒有動過」,是資料不在。'+
+      '帳本記著 '+r.n+' 筆快照、版本序到 v'+r.v+';本站手上'+(t.length?'只有 1 筆':'一筆軌跡都沒有')+'。</div>';
+  var revs=t.length ? '<div class="dcl-table-scroll"><table class="mk-t">'+
+    '<thead><tr><th>版</th><th>日期</th><th>機率</th><th>變動</th><th>估計性語言</th><th>原因</th></tr></thead><tbody>'+
+    t.map(function(x,i){
+      var prev=i?t[i-1].p:null;
+      var cls=i===0?"is-first":x.p>prev?"is-up":x.p<prev?"is-down":"is-hold";
+      return '<tr class="dcl-rev-row '+cls+'"><td class="mk-num">v'+x.v+'</td>'+
+        '<td class="mk-num">'+(x.d?esc(x.d):'<span class="dcl-empty">日期未記錄</span>')+'</td>'+
+        '<td class="mk-num">'+x.p+'%</td>'+
+        '<td class="mk-num">'+(i===0?'<span class="dcl-empty">首發</span>':
+          x.p===prev?'—':'<span class="mk-delta '+cls+'">'+(x.p>prev?'+':'')+(x.p-prev)+'</span>')+'</td>'+
+        '<td>'+IA.word(x.p)+'</td>'+
+        '<td><span class="dcl-empty">不在公開範圍</span></td></tr>';}).join("")+
+    '</tbody></table></div>'+
+    '<p class="mk-note">「原因」欄留著而不是整欄拿掉:每一次改機率都有理由,'+
+    '留空欄看得出「有這件事」,整欄消失則會讓人以為改機率沒有理由。</p>'
+    : '';
+
+  var facts=[["可見快照",r.n+" 筆"],["版本序","v"+r.v+(r.v>r.n?"(斷裂)":"")],
+    ["初始機率",r.p0===null?"未匯出":r.p0+"%"],["最新機率",r.p+"%("+IA.word(r.p)+")"],
+    ["機率區間",t.length?lo+"–"+hi+"%":"無軌跡"],["驗證窗口",(r.ws||"未記錄")+" → "+(r.we||"未記錄")],
+    ["建立日期",(r.c0||"未記錄")+(r.c0===IA.IMPORT_DAY?"(匯入日)":"")],["最後修訂",r.upd||"未記錄"]];
+
+  main.innerHTML='<button class="mk-back" id="back">← 返回總表</button>'+
+   '<div class="mk-chain-head"><div class="mk-chain-id">'+esc(r.cid)+'</div>'+
+     '<h1 class="mk-chain-stmt">'+esc(r.stmt)+'</h1>'+
+     '<div class="mk-chain-state"><span class="mk-state is-'+IA.stCls(r)+'">'+esc(IA.stLab(r))+'</span>'+
+       IA.outcomeCell(r)+'</div>'+
+     (r.flags.length?'<div class="mk-flagbox">'+r.flags.map(function(f){
+       return '<div class="mk-flagrow"><span class="mk-flag'+(f[2]?' is-hard':'')+'">'+esc(f[0])+'</span><span>'+esc(f[1])+'</span></div>';}).join("")+'</div>':'')+
+   '</div>'+
+   IA.head("紀錄")+
+   '<div class="dcl-scores">'+facts.map(function(f){
+     return '<div class="dcl-score"><span class="mk-score-k">'+esc(f[0])+'</span>'+
+       '<span class="mk-score-v" style="font-size:17px">'+esc(f[1])+'</span></div>';}).join("")+'</div>'+
+   IA.head("機率隨時間變化",t.length>1?"階梯圖 · 每個版本都畫出,包含維持不變的":"無資料")+
+   '<div class="dcl-panel-flush mk-chartbox">'+chart+'</div>'+
+   IA.head("逐版原因",t.length?"全部版本依序展開 · 不折疊、不分頁":"無資料")+
+   (revs||'<div class="dcl-panel-flush mk-void">沒有可展開的版本。</div>')+
+   IA.head("影響面與行為者")+
+   '<div class="dcl-panel-flush" style="padding:15px 17px">'+
+     (r.domA.length?r.domA.map(function(d){return '<span class="dcl-domain">'+esc(d)+'</span>';}).join(""):'<span class="dcl-empty">未標記影響面</span>')+
+     '<div style="margin-top:11px">'+
+       (r.actors.length?r.actors.map(function(a){return '<a class="dcl-domain" href="../actors/#'+encodeURIComponent(a)+'">'+esc(a)+'</a>';}).join("")
+        :'<span class="dcl-empty">命題文字比對不到任何有利益卡片的行為者</span>')+'</div>'+
+   '</div>';
+  document.getElementById("back").addEventListener("click",function(){
+    history.pushState({},"","./"); showList();});
+  scrollTo(0,0);
+}
+
+function showList(){
+  main.innerHTML=listView(); bindFilters(); renderRows(); scrollTo(0,0);
+}
+
+var q=new URLSearchParams(location.search).get("c");
+showList();
+if(q) open(q);
+</script>
+</body>
+</html>

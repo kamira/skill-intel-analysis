@@ -26,17 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 公開範圍的機械閘:資料檔若出現任何一個已具名排除的欄位就擋下。
-      # 這道閘防的是「以後有人重新匯出時把整張表倒進來」。
-      # 全文比對,不做註解豁免——豁免等於留一條「寫在註解裡就過」的後門。
-      # 代價是 data.js 的檔頭不能字面列出這五個名字,該處已註明原因。
+      # 公開範圍的機械閘:兩道,見 .github/scope_guard.py 的檔頭。
+      # CHG-20260829-02:站台由單檔改為多頁,資料檔不只 data.js,且新增了利益卡片結構檔,
+      # 因此把原本寫在 workflow 裡的 grep 換成可在本機重跑的腳本。
       - name: public scope guard
-        run: |
-          if grep -nE '(觸發指標|版本說明|校準備註|對應情境|來源分析)' site/data.js; then
-            echo "::error::site/data.js 含有 CHG-20260828-02 具名排除的欄位"
-            exit 1
-          fi
-          echo "公開範圍檢查通過"
+        run: python3 .github/scope_guard.py
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
