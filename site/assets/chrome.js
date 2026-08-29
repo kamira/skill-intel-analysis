@@ -149,13 +149,17 @@
     var byRoot = {};
     R.forEach(function (r) { var k = find(r.cid); (byRoot[k] = byRoot[k] || []).push(r); });
 
+    var OV = g.TOPIC_OVERRIDES || {};
     function topicOf(r) {
+      if (OV[r.cid]) return OV[r.cid][0];
       for (var i = 0; i < g.TOPICS.length; i++) {
         var t = g.TOPICS[i];
         for (var j = 0; j < t[2].length; j++) if (r.stmt.indexOf(t[2][j]) >= 0) return t[0];
       }
       return null;
     }
+    var order = {};
+    g.TOPICS.forEach(function (t, i) { order[t[0]] = i; });
 
     var events = g.TOPICS.map(function (t) {
       return { id: t[0], title: t[1], branches: [], chains: [] };
@@ -167,7 +171,14 @@
       var rows = byRoot[k].slice().sort(function (a, b) { return (T(a.origin) || 0) - (T(b.origin) || 0); });
       var votes = {};
       rows.forEach(function (r) { var t = topicOf(r); if (t) votes[t] = (votes[t] || 0) + 1; });
-      var best = Object.keys(votes).sort(function (a, b) { return votes[b] - votes[a]; })[0];
+      /* 平手時取「最新那條鏈」的主題——一條分支現在在講什麼,由它最後一條鏈決定,
+         而不是由 Object.keys 的順序決定。再平手才退回主題表的順序。 */
+      var tail0 = topicOf(rows[rows.length - 1]);
+      var best = Object.keys(votes).sort(function (a, b) {
+        return (votes[b] - votes[a]) ||
+               ((b === tail0 ? 1 : 0) - (a === tail0 ? 1 : 0)) ||
+               (order[a] - order[b]);
+      })[0];
       if (!best) best = "other";
       /* 分支以其最早建立的鏈為名 */
       var head = rows[0], tail = rows[rows.length - 1];
