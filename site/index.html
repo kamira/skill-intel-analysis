@@ -14,6 +14,8 @@
 <body>
 <script src="data.js"></script>
 <script src="actors.js"></script>
+<script src="lineage.js"></script>
+<script src="topics.js"></script>
 <script src="events.js"></script>
 <script src="geo.js"></script>
 <script src="assets/chrome.js"></script>
@@ -50,7 +52,10 @@ var NS=window.GEO_NONSTATE.map(function(c){
 var live=R.filter(function(r){return r.track==="追蹤中"||r.track==="待驗證";})
   .sort(function(a,b){return (IA.T(b.upd)||0)-(IA.T(a.upd)||0);}).slice(0,15);
 
-var EV=window.EVENTS[0];
+var G=IA.groups();
+var evSorted=G.events.slice().sort(function(a,b){return b.chains.length-a.chains.length;});
+var totalBranches=G.events.reduce(function(s,e){return s+e.branches.length;},0);
+var totalMulti=G.events.reduce(function(s,e){return s+e.multi.length;},0);
 
 main.innerHTML =
  '<div class="dcl-scores">'+kpis.map(function(k){
@@ -62,13 +67,17 @@ main.innerHTML =
    '用的是<b>最新機率</b>而非結案當下的機率——機率常在結案前才被調到接近結果,所以這個分數偏好。'+
    '上列數字全部由本頁資料即時算出,沒有一個是手寫的。</p>'+
 
- IA.head("事件鍊","一個主要事件,底下掛著會改變後果機率的新聞")+
- '<div class="dcl-panel-flush mk-void">'+
-   '<b>'+esc(EV.title)+'</b> — '+esc(EV.subtitle)+'<br>'+
-   EV.window[0]+' → '+EV.window[1]+' · '+EV.outcomes.length+' 種後果分支 · '+EV.news.length+' 則新聞。'+
-   '<span class="mk-void-sub">「事件鍊」指的是事件之間的關係;同一句命題的逐版修訂請看<a href="chains/">預測鏈總表</a>。</span><br>'+
-   '<a href="events/'+EV.id+'/" style="display:inline-block;margin-top:10px">開啟事件鍊 →</a>'+
- '</div>'+
+ IA.head("事件鍊",G.events.length+" 個主要事件 · "+totalBranches+" 條後果分支 · 其中 "+totalMulti+" 條跨越至少一次結案")+
+ '<div class="dcl-table-scroll"><table class="mk-t">'+
+   '<thead><tr><th>主要事件</th><th>預測鏈</th><th>後果分支</th><th>多鏈分支</th><th>已計分</th></tr></thead><tbody>'+
+   evSorted.map(function(e){
+     return '<tr class="is-link" data-h="events/'+esc(e.id)+'/">'+
+       '<td class="mk-stmt"><span class="mk-id">'+esc(e.title)+'</span></td>'+
+       '<td class="mk-num">'+e.chains.length+'</td><td class="mk-num">'+e.branches.length+'</td>'+
+       '<td class="mk-num">'+e.multi.length+'</td><td class="mk-num">'+e.scored.length+'</td></tr>';}).join("")+
+ '</tbody></table></div>'+
+ '<p class="mk-note">「事件鍊」指的是<b>事件之間的關係</b>:一個主要事件底下掛著它的後果分支,'+
+ '一條分支是一串被續鏈接起來的命題。同一句命題的逐版修訂是另一件事,請看<a href="chains/">預測鏈總表</a>。</p>'+
 
  IA.head("預測鏈地理熱度","熱度 = 命題文字提及該國的鏈數(文字比對推得,非帳本原始欄位)")+
  '<div class="dcl-panel-flush mk-mapbox">'+
@@ -98,6 +107,8 @@ main.innerHTML =
 
 Array.prototype.forEach.call(main.querySelectorAll("tr[data-id]"),function(tr){
   tr.addEventListener("click",function(){location.href="chains/?c="+encodeURIComponent(tr.dataset.id);});});
+Array.prototype.forEach.call(main.querySelectorAll("tr[data-h]"),function(tr){
+  tr.addEventListener("click",function(){location.href=tr.dataset.h;});});
 window.drawGeoMap(document.getElementById("worldmap"),document.getElementById("maptip"),GC);
 </script>
 </body>
