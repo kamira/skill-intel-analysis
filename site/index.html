@@ -2,673 +2,103 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<title>情報分析工作台</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="預測驗證帳本的公開檢視:199 條事件鍊的機率、現況與校準結果。">
+<title>情報分析工作台</title>
+<meta name="description" content="預測驗證帳本的公開檢視:200 條預測鏈的機率、現況與校準結果,以及事件鍊的後果分支。">
 <meta name="robots" content="index, follow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
-<style>
-:root{
-  --ink:#0B1114; --panel:#121A1E; --panel-2:#161F24; --line:#1F2C31; --line-soft:#182226;
-  --text:#E2EAE7; --muted:#8FA1A3; --faint:#63767A; --accent:#7FA8C4; --accent-dim:#2B4051; --brass:#C9A45C;
-  --s-track:#7FA8C4; --s-pend:#9DB37C; --s-dorm:#6E7C82; --s-ok:#5FB59A; --s-bad:#C4675E; --s-none:#4E5C61;
-  --h0:#1B1F2A; --h1:#4A2C5A; --h2:#8E3B54; --h3:#C75A3F; --h4:#E89B3C; --h5:#F7D46B;
-  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
-  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  --serif:"Noto Serif TC","Songti TC",serif;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{background:var(--ink);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased}
-button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
-a{color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-
-.app{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
-.rail{background:#080D0F;border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.brand{padding:22px 18px 18px;border-bottom:1px solid var(--line)}
-.brand h1{margin:0;font-family:var(--serif);font-weight:700;font-size:17px;letter-spacing:.06em;line-height:1.35}
-.brand .sub{margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
-.nav{padding:12px 10px;display:flex;flex-direction:column;gap:2px}
-.nav button{display:block;width:100%;text-align:left;padding:10px 12px;border-left:2px solid transparent;color:var(--muted);transition:color .12s,background .12s}
-.nav button .zh{display:block;font-size:13.5px;font-weight:500}
-.nav button .en{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-top:2px}
-.nav button:hover{color:var(--text);background:#0D1417}
-.nav button[aria-current="true"]{color:var(--text);background:#101A1F;border-left-color:var(--accent)}
-.nav button[aria-current="true"] .en{color:var(--accent)}
-.rail-foot{margin-top:auto;padding:14px 18px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;line-height:1.9;color:var(--faint)}
-.rail-foot b{color:var(--muted);font-weight:500}
-
-.topbar{display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid var(--line);background:#0A1013;position:sticky;top:0;z-index:20}
-.topbar h2{margin:0;font-family:var(--serif);font-size:16px;font-weight:600;letter-spacing:.04em}
-.topbar .meta{margin-left:auto;display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
-.topbar .meta b{color:var(--muted);font-weight:500}
-.scope{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:#0B1114;background:var(--brass);padding:3px 8px;border-radius:2px;font-weight:600}
-
-.view{display:none;padding:26px 28px 64px}
-.view.on{display:block}
-.wrap{max-width:1440px;margin:0 auto}
-.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin:0 0 10px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:3px}
-.panel-h{display:flex;align-items:baseline;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
-.panel-h h3{margin:0;font-family:var(--serif);font-size:14.5px;font-weight:600;letter-spacing:.05em}
-.panel-h .note{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.06em;margin-left:auto}
-
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:22px}
-.kpi{background:var(--panel);padding:16px 18px 18px;min-height:120px;display:flex;flex-direction:column}
-.kpi .lab{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
-.kpi .val{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1.25;margin-top:8px;font-variant-numeric:tabular-nums}
-.kpi .val small{font-size:13px;font-weight:400;color:var(--muted);margin-left:4px}
-.kpi .sub{margin-top:auto;padding-top:8px;font-size:11.5px;color:var(--muted);line-height:1.55}
-.kpi .sub em{font-style:normal;font-family:var(--mono);color:var(--text)}
-.kpi.hi .val{color:var(--h5)} .kpi.warn .val{color:var(--h4)}
-
-.mapbox{position:relative;padding:10px 10px 0;margin-bottom:22px}
-#worldmap{display:block;width:100%;height:auto}
-.maplegend{display:flex;align-items:center;gap:14px;padding:12px 8px 14px;border-top:1px solid var(--line-soft);margin-top:8px;flex-wrap:wrap}
-.ramp{height:8px;flex:1;min-width:120px;border-radius:1px;background:linear-gradient(90deg,var(--h0),var(--h1),var(--h2),var(--h3),var(--h4),var(--h5))}
-.legend-lab{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);white-space:nowrap}
-.tip{position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-114%);background:#05090B;border:1px solid var(--line);border-radius:2px;padding:8px 11px;min-width:132px;transition:opacity .1s;z-index:5}
-.tip.on{opacity:1}
-.tip .n{font-size:12.5px;font-weight:500}
-.tip .d{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
-
-.tablewrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:820px}
-th{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;text-align:left;font-weight:500;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
-tbody tr[data-id]{cursor:pointer;transition:background .1s}
-tbody tr[data-id]:hover{background:var(--panel-2)}
-tbody tr:last-child td{border-bottom:none}
-.cid{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
-.cname{font-size:13.5px;font-weight:500;line-height:1.55}
-.ctags{margin-top:3px;font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.05em}
-.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
-.lenbar{width:96px;height:5px;background:#0D1518;border-radius:1px;overflow:hidden;margin-top:5px}
-.lenbar i{display:block;height:100%;background:var(--accent-dim)}
-.prob{font-family:var(--mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
-.word{font-size:11px;color:var(--muted);margin-top:1px}
-
-.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:3px 9px;border-radius:2px;white-space:nowrap;border:1px solid}
-.chip::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
-.c-track{color:var(--s-track);border-color:#26414F;background:#0F1A20}
-.c-pend{color:var(--s-pend);border-color:#33402A;background:#131A11}
-.c-dorm{color:var(--s-dorm);border-color:#2A3438;background:#111719}
-.c-ok{color:var(--s-ok);border-color:#23453C;background:#0E1A17}
-.c-bad{color:var(--s-bad);border-color:#4A2A26;background:#1A1110}
-.c-none{color:var(--s-none);border-color:#232B2E;background:#0E1315}
-
-.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line-soft)}
-.fgroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.fgroup>span{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-right:2px}
-.pill{font-family:var(--mono);font-size:11px;padding:5px 11px;border:1px solid var(--line);border-radius:2px;color:var(--muted);background:#0E1518;transition:all .12s}
-.pill:hover{color:var(--text);border-color:#2C3D44}
-.pill[aria-pressed="true"]{color:var(--ink);background:var(--accent);border-color:var(--accent);font-weight:600}
-.search{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:2px;padding:5px 10px;background:#0E1518}
-.search input{background:none;border:none;color:var(--text);font-family:var(--sans);font-size:12.5px;width:200px}
-.search input::placeholder{color:var(--faint)}
-.search input:focus{outline:none}
-.fcount{font-family:var(--mono);font-size:10.5px;color:var(--faint);padding:0 18px 12px}
-
-.back{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:16px}
-.back:hover{color:var(--accent)}
-.dhead{border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:22px 24px;margin-bottom:18px}
-.dhead h3{margin:8px 0 0;font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.5;text-wrap:balance}
-.dfacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;margin-top:20px;overflow:hidden}
-.dfact{background:var(--panel-2);padding:11px 14px}
-.dfact .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase}
-.dfact .v{font-family:var(--mono);font-size:14px;margin-top:5px;font-variant-numeric:tabular-nums}
-.dcols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
-@media (max-width:1180px){.dcols{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:820px){.app{grid-template-columns:1fr}.rail{position:static;height:auto}.kpis{grid-template-columns:1fr}.cgrid{grid-template-columns:1fr}.selfcheck{grid-template-columns:1fr}}
-
-.spark{padding:18px 22px}
-.tl{position:relative;padding-left:26px;margin-top:16px}
-.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--line)}
-.tlitem{position:relative;padding-bottom:14px}
-.tlitem:last-child{padding-bottom:0}
-.tlitem::before{content:"";position:absolute;left:-24px;top:6px;width:9px;height:9px;border-radius:50%;border:2px solid var(--panel);background:var(--faint)}
-.tlitem.up::before{background:var(--h4)} .tlitem.down::before{background:var(--accent)} .tlitem.first::before{background:var(--s-ok)}
-.tlitem .when{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
-.tlitem .when b{color:var(--muted);font-weight:500;margin-left:8px}
-.tlitem .what{margin-top:2px;font-size:13px}
-.delta{display:inline-block;font-family:var(--mono);font-size:11px;margin-left:8px;padding:1px 7px;border-radius:2px;background:#16232A;color:var(--accent)}
-.lists{padding:18px 22px;border-top:1px solid var(--line-soft)}
-.lists h4{margin:0 0 8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;font-weight:500}
-.lists p{margin:0 0 14px;font-size:13px;color:var(--muted);line-height:1.75}
-.linkchips{display:flex;flex-wrap:wrap;gap:7px}
-.linkchip{font-family:var(--mono);font-size:10.5px;padding:4px 9px;border:1px solid var(--line);border-radius:2px;color:var(--muted);background:#0E1518}
-.linkchip:hover{color:var(--accent);border-color:var(--accent-dim)}
-
-.cgrid{display:grid;grid-template-columns:214px minmax(0,1fr);gap:18px;align-items:start}
-.clist{max-height:72vh;overflow-y:auto}
-.clist button{display:block;width:100%;text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-soft);color:var(--muted);transition:all .12s}
-.clist button .cn{font-size:13.5px;font-weight:500}
-.clist button .cm{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:2px}
-.clist button:hover{background:var(--panel-2);color:var(--text)}
-.clist button[aria-pressed="true"]{background:#101A20;color:var(--text);box-shadow:inset 2px 0 0 var(--accent)}
-.cbody{padding:24px 26px}
-.cbody h3{margin:0;font-family:var(--serif);font-size:24px;font-weight:600}
-.cbody .role{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-top:6px}
-.csec{margin-top:24px;padding-top:18px;border-top:1px solid var(--line-soft)}
-.csec>h4{margin:0 0 12px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--brass);text-transform:uppercase;font-weight:500}
-.csec p{font-size:13.5px;line-height:1.8;max-width:64ch;margin:0 0 8px;color:var(--muted)}
-.minigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
-.minigrid div{background:var(--panel-2);padding:10px 13px}
-.minigrid .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint)}
-.minigrid .v{font-family:var(--mono);font-size:16px;margin-top:4px;font-variant-numeric:tabular-nums}
-
-.doc{max-width:78ch;margin:0 auto}
-.doc-head{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
-.doc-head h3{margin:10px 0 0;font-family:var(--serif);font-size:27px;font-weight:700;line-height:1.5;text-wrap:balance}
-.doc-head .by{margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--faint);line-height:2}
-.doc h4{font-family:var(--serif);font-size:17px;font-weight:600;margin:34px 0 4px}
-.doc h4 .no{font-family:var(--mono);font-size:11px;color:var(--brass);letter-spacing:.14em;margin-right:10px}
-.doc>p{font-size:14px;line-height:1.9;color:#CBD6D4;max-width:66ch}
-.gap{display:grid;grid-template-columns:minmax(0,1fr) 66px;gap:14px;align-items:start;border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:14px 18px;margin-top:12px}
-.gap .imp{font-family:var(--mono);font-size:10.5px;text-align:right;padding-top:2px}
-.imp.high{color:var(--s-bad)}.imp.mid{color:var(--h4)}.imp.low{color:var(--s-dorm)}
-.gap b{font-size:13.5px}
-.gap .why{color:var(--faint);font-size:12.5px}
-.wrongway{border-left:2px solid var(--h3);background:#171215;padding:16px 20px;margin-top:14px;border-radius:0 3px 3px 0}
-.wrongway p{margin:0 0 8px;font-size:13.5px;line-height:1.8}
-.wrongway p:last-child{margin-bottom:0;color:var(--muted)}
-.selfcheck{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-top:14px}
-.selfcheck div{background:var(--panel);padding:14px 16px}
-.selfcheck .t{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase}
-.selfcheck .r{font-family:var(--mono);font-size:13px;margin-top:8px;color:var(--s-ok)}
-.selfcheck .r.flag{color:var(--h4)}
-.selfcheck .d{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.65}
-.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--faint);line-height:1.9}
-.calbar{display:flex;align-items:flex-end;gap:4px;height:120px;padding:18px 22px 8px}
-.calcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
-.calcol i{display:block;width:100%;background:var(--accent-dim);border-radius:1px 1px 0 0}
-.calcol i.act{background:var(--h4)}
-.callab{display:flex;gap:4px;padding:0 22px 16px}
-.callab span{flex:1;text-align:center;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
-</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/console.css">
 </head>
 <body>
-<div class="app">
-  <aside class="rail">
-    <div class="brand">
-      <h1>情報分析工作台</h1>
-      <div class="sub">Intel Chain Console</div>
-    </div>
-    <nav class="nav" id="nav">
-      <button data-view="dash" aria-current="true"><span class="zh">戰情儀表板</span><span class="en">Dashboard</span></button>
-      <button data-view="chains"><span class="zh">事件鍊總表</span><span class="en">Chain Ledger</span></button>
-      <button data-view="countries"><span class="zh">國家背景基準</span><span class="en">Actor Baseline</span></button>
-      <button data-view="statement"><span class="zh">分析缺口聲明</span><span class="en">Gap Statement</span></button>
-    </nav>
-    <div class="rail-foot">
-      方法論 <b>SKILL-01…20</b><br>
-      帳本 <b>版本鏈快照</b><br>
-      校準 <b>Brier / ICD 203</b>
-    </div>
-  </aside>
-
-  <div class="main">
-    <header class="topbar">
-      <h2 id="crumb">戰情儀表板</h2>
-      <div class="meta">
-        <span>資料截止 <b id="asof">—</b></span>
-        <span class="scope">公開子集:鍊層摘要與機率</span>
-      </div>
-    </header>
-
-    <section class="view on" id="view-dash"><div class="wrap">
-      <div class="kpis" id="kpis"></div>
-      <div class="panel mapbox">
-        <div class="panel-h" style="padding-left:8px;padding-right:8px">
-          <h3>事件鍊地理熱度</h3>
-          <span class="note">熱度=命題文字提及該國的鍊數(文字比對推得,非帳本原始欄位)</span>
-        </div>
-        <canvas id="worldmap"></canvas>
-        <div class="tip" id="maptip"><div class="n"></div><div class="d"></div></div>
-        <div class="maplegend">
-          <span class="legend-lab">關聯鍊數 少</span>
-          <span class="ramp"></span>
-          <span class="legend-lab">多</span>
-          <span class="legend-lab" style="margin-left:14px;color:var(--h5)">○ 標記＝被提及的國家</span>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-h"><h3>追蹤中的事件鍊</h3><span class="note">依最近更新排序 · 點擊列看機率軌跡</span></div>
-        <div class="tablewrap"><table>
-          <thead><tr><th>鍊 ID</th><th>命題</th><th>鍊齡</th><th>現況</th><th>最新機率</th><th>驗證視窗</th></tr></thead>
-          <tbody id="dashrows"></tbody>
-        </table></div>
-      </div>
-      <div class="foot" id="dashfoot"></div>
-    </div></section>
-
-    <section class="view" id="view-chains"><div class="wrap">
-      <div id="chains-list">
-        <div class="panel">
-          <div class="panel-h"><h3>事件鍊總表</h3><span class="note" id="ledgernote"></span></div>
-          <div class="filters">
-            <div class="fgroup" id="f-status"><span>現況</span></div>
-            <div class="fgroup" id="f-dom"><span>影響面</span></div>
-            <div class="search"><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">/</span>
-              <input id="f-q" type="search" placeholder="搜尋命題或鍊 ID…"></div>
-          </div>
-          <div class="fcount" id="fcount"></div>
-          <div class="tablewrap"><table>
-            <thead><tr><th>鍊 ID</th><th>命題</th><th>鍊齡</th><th>版本</th><th>現況</th><th>最新機率</th><th>結果</th><th>驗證視窗</th></tr></thead>
-            <tbody id="chainrows"></tbody>
-          </table></div>
-        </div>
-      </div>
-      <div id="chains-detail" style="display:none"></div>
-    </div></section>
-
-    <section class="view" id="view-countries"><div class="wrap">
-      <p class="eyebrow">由命題文字推得的國家別基準 · 非 SKILL-04 行為者卡片</p>
-      <div class="cgrid">
-        <div class="panel clist" id="clist"></div>
-        <div class="panel cbody" id="cbody"></div>
-      </div>
-      <div class="foot">核心利益、利益排序、紅線這三個 SKILL-04 欄位<b>不存在於預測驗證資料庫</b>,因此本頁不呈現,也不從命題臆測。本頁只呈現帳本算得出來的:該國被多少條鍊提及、集中在哪些影響面、已結案的命中情形。</div>
-    </div></section>
-
-    <section class="view" id="view-statement"><div class="wrap"><div class="doc" id="doc"></div></div></section>
-  </div>
-</div>
-
 <script src="data.js"></script>
+<script src="actors.js"></script>
+<script src="events.js"></script>
+<script src="geo.js"></script>
+<script src="assets/chrome.js"></script>
+<script src="assets/map.js"></script>
 <script>
 "use strict";
-const L = window.LEDGER, C = L.cols;
-const R = L.rows.map(r => { const o = {}; C.forEach((k,i)=>o[k]=r[i]); return o; });
-const ASOF = L.meta.exported;
-const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
-const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const D = s => s ? new Date(s+"T00:00:00Z").getTime() : null;
-const days = (a,b) => (a&&b) ? Math.round((D(b)-D(a))/86400000) : null;
+var IA=window.IA, R=IA.R, esc=IA.esc, L=IA.L;
+var main=IA.chrome({section:"戰情儀表板",here:"",depth:0,
+  note:"帳本現況、地理熱度、以及正在追蹤的鏈",kind:"儀表板"});
 
-/* ── 現況 ── */
-const ST = {
-  "追蹤中":{cls:"c-track",lab:"追蹤中"}, "待驗證":{cls:"c-pend",lab:"待驗證"},
-  "休眠":{cls:"c-dorm",lab:"冷鏈休眠"}, "已驗證":{cls:"c-ok",lab:"已驗證"},
-  "已失效":{cls:"c-bad",lab:"已失效"}, "":{cls:"c-none",lab:"未標記"}
-};
-const stOf = r => ST[r.track] || ST[""];
-const chip = r => '<span class="chip '+stOf(r).cls+'">'+stOf(r).lab+'</span>';
-const OC = {H:["命中","var(--s-ok)"],M:["未發生","var(--s-bad)"],P:["部分","var(--h4)"],U:["無法判定","var(--faint)"]};
-const probColor = p => p>=80?"var(--h5)":p>=55?"var(--h4)":p>=45?"var(--muted)":"var(--s-dorm)";
-/* 紀律 16 估計性語言對表 */
-const WORDS = [[95,100,"幾乎確定"],[80,95,"很可能"],[55,80,"可能"],[45,55,"兩可"],[20,45,"不太可能"],[5,20,"很不可能"],[0,5,"幾乎不可能"]];
-const wordOf = p => (WORDS.find(w => p>=w[0] && p<w[1]) || WORDS[0])[2];
+var span=IA.days(L.meta.span[0],L.meta.span[1]);
+var dueSoon=R.filter(function(r){
+  if(r.track!=="追蹤中"&&r.track!=="待驗證") return false;
+  var d=IA.days(IA.ASOF,r.we); return d!==null&&d>=0&&d<=30;});
 
-/* ── 國家推導(文字比對;明示為推導) ── */
-const CMAP = [
- ["美國",[-98,39],["美方","美軍","美伊","美以","美沙","美烏","美日","美韓","美中","中美","美對","美參議院","美眾院","川普","華府","CENTCOM","OFAC","美在","美國","美陣"]],
- ["伊朗",[53,32],["伊朗","伊方","德黑蘭","霍爾木茲","霍峽","美伊","以伊"]],
- ["以色列",[35,31.5],["以色列","以方","以軍","以黎","以伊","西岸","加薩","加沙","內坦雅胡"]],
- ["黎巴嫩",[36,34],["黎巴嫩","以黎","真主黨","貝魯特","泰爾","對黎"]],
- ["俄羅斯",[56,58],["俄方","俄軍","俄對","對俄","俄境","俄羅斯","莫斯科","克里米亞","俄烏","烏俄","俄伊","中俄"]],
- ["烏克蘭",[31,49],["烏克蘭","烏方","烏軍","烏對","基輔","俄烏","烏俄","挺烏","對烏","烏歐","烏波","頓內茲克"]],
- ["中國",[104,35],["中國","中方","解放軍","北京","習近平","中美","美中","中俄","印中","中朝","中菲"]],
- ["台灣",[121,23.7],["台灣","台海","對台","台周邊","東沙","金門"]],
- ["日本",[138,36],["日本","日方","日銀","美日","日本央行","美日韓"]],
- ["韓國",[127.5,36.5],["南韓","韓國","美韓","美日韓","朝鮮半島","半島"]],
- ["北韓",[126,39.5],["北韓","中朝"]],
- ["沙烏地阿拉伯",[45,24],["沙烏地","沙國","沙方","美沙","利雅德","吉贊"]],
- ["葉門",[47,15.5],["葉門","胡塞","曼德","巴布艾曼","摩卡"]],
- ["阿聯",[54,24],["阿聯"]],
- ["卡達",[51,25],["卡達","卡塔爾"]],
- ["阿曼",[57,21],["阿曼"]],
- ["科威特",[47.7,29.3],["科威特"]],
- ["伊拉克",[43,33],["伊拉克"]],
- ["約旦",[36,31],["約旦"]],
- ["埃及",[30,27],["埃及","蘇伊士"]],
- ["土耳其",[35,39],["土耳其","安卡拉"]],
- ["歐盟",[4.4,50.8],["歐盟","歐洲","申根","歐俄","北約","跨大西洋"]],
- ["德國",[10,51],["德國","德法"]],
- ["法國",[2,47],["法國","德法"]],
- ["波蘭",[19,52],["波蘭","烏波"]],
- ["英國",[-2,54],["英國"]],
- ["羅馬尼亞",[25,46],["羅馬尼亞"]],
- ["印度",[78,22],["印度","印中"]],
- ["巴基斯坦",[70,30],["巴基斯坦"]],
- ["菲律賓",[122,12],["菲律賓","中菲","南海"]],
- ["越南",[106,16],["越南"]],
- ["新加坡",[104,1.3],["新加坡"]],
- ["馬來西亞",[102,4],["馬來西亞"]],
- ["印尼",[113,-2],["印尼","東協"]],
- ["澳洲",[134,-25],["澳洲","AUKUS"]],
- ["巴西",[-51,-12],["巴西"]],
- ["秘魯",[-75,-10],["秘魯"]],
- ["古巴",[-79,22],["古巴"]],
- ["哈薩克",[67,48],["哈薩克","中亞","裡海"]],
- ["巴布亞紐幾內亞",[145,-6],["巴紐"]]
+var kpis=[
+  ["分析區間",span,"日","帳本涵蓋 "+L.meta.span[0]+" → "+L.meta.span[1],""],
+  ["預測鏈",R.length,"條","追蹤中 <em>"+IA.census.追蹤中+"</em> · 休眠 <em>"+IA.census.休眠+"</em> · 狀態未記錄 <em>"+IA.census.狀態未記錄+"</em>",""],
+  ["預測快照",L.meta.snapshots,"版","其中 <em>"+L.meta.unchained+"</em> 版未掛鏈根(見缺口聲明)",""],
+  ["命中率",Math.round(IA.hitRate*100),"%","已計分 <em>"+IA.scored.length+"</em> 題 · Brier <em>"+IA.brier.toFixed(4)+"</em>","is-hi"],
+  ["待處理",dueSoon.length,"條","驗證窗口 30 日內到期<br>待驗證 <em>"+IA.census.待驗證+"</em> 條",""]
 ];
-R.forEach(r => {
-  r.cs = CMAP.filter(c => c[2].some(k => r.stmt.indexOf(k) >= 0)).map(c => c[0]);
-  r.age = days(r.c0, r.upd || ASOF);
-  r.domA = r.dom ? r.dom.split("|") : [];
+
+/* 地理熱度:只算 geo.js 的國家清單 */
+var GC={};
+R.forEach(function(r){
+  window.GEO.forEach(function(c){
+    if(c[2].some(function(k){return r.stmt.indexOf(k)>=0;})) GC[c[0]]=(GC[c[0]]||0)+1;});
 });
-const CCOUNT = {};
-R.forEach(r => r.cs.forEach(n => CCOUNT[n] = (CCOUNT[n]||0)+1));
+var NS=window.GEO_NONSTATE.map(function(c){
+  return [c[0],R.filter(function(r){return c[1].some(function(k){return r.stmt.indexOf(k)>=0;});}).length,c[2]];
+}).filter(function(x){return x[1];}).sort(function(a,b){return b[1]-a[1];});
 
-/* ── KPI(全部推導,不手寫) ── */
-const spanDays = days(L.meta.span[0], L.meta.span[1]);
-const nTrack = R.filter(r=>r.track==="追蹤中").length;
-const nPend  = R.filter(r=>r.track==="待驗證").length;
-const nDorm  = R.filter(r=>r.track==="休眠").length;
-const nNone  = R.filter(r=>!r.track).length;
-const resolved = R.filter(r => r.ov !== null && r.ov !== undefined);
-const hitScore = resolved.reduce((s,r)=>s+r.ov,0);
-const hitRate = resolved.length ? hitScore/resolved.length : 0;
-const brier = resolved.length ? resolved.reduce((s,r)=>s+Math.pow(r.p/100 - r.ov,2),0)/resolved.length : 0;
-const dueSoon = R.filter(r => (r.track==="追蹤中"||r.track==="待驗證") && r.we && days(ASOF, r.we) !== null && days(ASOF,r.we) >= 0 && days(ASOF,r.we) <= 30);
-const maxAge = Math.max.apply(null, R.map(r=>r.age||0));
+var live=R.filter(function(r){return r.track==="追蹤中"||r.track==="待驗證";})
+  .sort(function(a,b){return (IA.T(b.upd)||0)-(IA.T(a.upd)||0);}).slice(0,15);
 
-$("#asof").textContent = ASOF;
-$("#kpis").innerHTML = [
-  ["分析區間", spanDays, "日", "帳本涵蓋 "+L.meta.span[0]+" → "+L.meta.span[1], ""],
-  ["事件鍊", R.length, "條", "追蹤中 <em>"+nTrack+"</em> · 休眠 <em>"+nDorm+"</em> · 未標記 <em>"+nNone+"</em>", ""],
-  ["預測快照", L.meta.snapshots, "版", "其中 <em>"+L.meta.unchained+"</em> 版未掛鏈根(見缺口聲明)", ""],
-  ["命中率", Math.round(hitRate*100), "%", "已結案 <em>"+resolved.length+"</em> 題 · Brier <em>"+brier.toFixed(3)+"</em>", "hi"],
-  ["待處理", dueSoon.length, "條", "驗證視窗 30 日內到期<br>待驗證 <em>"+nPend+"</em> 條", "warn"]
-].map(k => '<div class="kpi '+k[4]+'"><div class="lab">'+k[0]+'</div><div class="val">'+k[1]+'<small>'+k[2]+'</small></div><div class="sub">'+k[3]+'</div></div>').join("");
+var EV=window.EVENTS[0];
 
-$("#dashfoot").innerHTML = "命中率 = 已結案鍊的結果值平均(已發生=1、部分發生=0.5、未發生=0);Brier = 平均 (機率−結果值)²,越低越好。"
-  + "上列數字全部由本頁資料即時算出,非人工填寫。";
+main.innerHTML =
+ '<div class="dcl-scores">'+kpis.map(function(k){
+   return '<div class="dcl-score '+k[4]+'"><span class="mk-score-k">'+k[0]+'</span>'+
+     '<span class="mk-score-v">'+k[1]+'<small>'+k[2]+'</small></span>'+
+     '<span class="mk-score-s">'+k[3]+'</span></div>';}).join("")+'</div>'+
+ '<p class="mk-note">命中率 = 已計分鏈的結果值平均(已發生 1、部分發生 0.5、未發生 0);'+
+   'Brier = 平均 (機率−結果值)²,越低越好,分母是已計分的 '+IA.scored.length+' 條而非 '+R.length+' 條。'+
+   '用的是<b>最新機率</b>而非結案當下的機率——機率常在結案前才被調到接近結果,所以這個分數偏好。'+
+   '上列數字全部由本頁資料即時算出,沒有一個是手寫的。</p>'+
 
-/* ── 世界地圖 ── */
-const LAND=[
-[[-168,66],[-166,60],[-158,56],[-152,58],[-145,60],[-136,58],[-130,52],[-124,46],[-122,37],[-117,32],[-113,28],[-106,23],[-97,20],[-92,16],[-86,13],[-83,9],[-79,9],[-83,15],[-87,20],[-91,25],[-95,29],[-88,30],[-82,26],[-80,32],[-75,36],[-70,42],[-66,45],[-60,47],[-56,52],[-64,56],[-76,57],[-78,62],[-85,63],[-95,62],[-92,68],[-105,69],[-120,70],[-133,69],[-141,70],[-156,71]],
-[[-45,60],[-38,65],[-30,68],[-22,71],[-20,76],[-25,81],[-35,83],[-50,82],[-58,79],[-55,72],[-52,66],[-48,61]],
-[[-79,9],[-72,12],[-64,11],[-60,8],[-52,5],[-50,0],[-44,-2],[-38,-5],[-35,-8],[-38,-13],[-39,-18],[-45,-23],[-48,-25],[-53,-33],[-57,-35],[-62,-39],[-63,-42],[-66,-46],[-69,-52],[-75,-53],[-73,-45],[-74,-38],[-72,-30],[-70,-23],[-71,-18],[-77,-8],[-80,-4],[-81,2],[-77,7]],
-[[-17,15],[-16,20],[-12,25],[-6,30],[0,32],[10,34],[20,32],[28,31],[33,31],[36,26],[38,18],[43,12],[48,11],[51,11],[45,5],[42,0],[41,-5],[40,-12],[35,-19],[33,-26],[28,-31],[25,-34],[19,-35],[15,-27],[12,-18],[13,-10],[9,-1],[9,4],[3,6],[-4,5],[-9,5],[-13,9],[-16,12]],
-[[-10,37],[-9,43],[-2,43],[0,49],[-5,50],[1,51],[4,53],[8,54],[10,58],[14,56],[18,59],[21,60],[25,65],[21,70],[28,71],[40,68],[55,68],[68,68],[75,73],[90,75],[105,77],[113,74],[130,72],[142,72],[160,70],[172,67],[180,66],[180,60],[170,60],[163,57],[156,52],[144,45],[140,42],[132,42],[130,42],[129,38],[127,35],[126,34],[126,37],[124,39],[121,39],[122,31],[121,25],[110,21],[105,10],[103,2],[97,8],[95,16],[92,21],[88,21],[80,15],[77,8],[73,20],[68,24],[62,25],[57,25],[50,29],[44,29],[40,24],[35,28],[36,36],[30,40],[26,40],[23,38],[19,40],[13,38],[12,45],[7,44],[3,43],[-3,36]],
-[[-5,50],[-3,54],[-5,58],[-2,58],[0,53],[1,51]],[[-10,52],[-6,52],[-6,55],[-10,55]],[[-24,64],[-14,65],[-15,66],[-22,66]],
-[[129,32],[132,33],[136,35],[140,36],[141,40],[145,44],[143,44],[139,38],[135,34],[131,31]],
-[[120,22],[122,25],[121,25],[120,22]],[[120,18],[124,18],[126,13],[126,7],[122,6],[119,11]],
-[[95,5],[100,0],[106,-6],[104,-6],[98,2]],[[109,2],[117,4],[118,-1],[114,-4],[110,-3]],[[105,-6],[114,-8],[114,-7],[105,-5]],
-[[131,-1],[141,-3],[150,-9],[141,-9],[133,-4]],
-[[113,-22],[114,-26],[115,-34],[118,-35],[129,-32],[135,-35],[140,-38],[147,-38],[150,-37],[153,-28],[146,-19],[142,-11],[137,-12],[132,-11],[126,-14],[121,-20]],
-[[166,-46],[170,-44],[173,-41],[175,-37],[177,-38],[174,-41],[171,-45]],[[43,-12],[50,-15],[47,-25],[44,-20]],
-[[80,6],[82,7],[81,9]],[[-84,22],[-77,20],[-74,20],[-79,23]]];
-const RAMP=[[27,31,42],[74,44,90],[142,59,84],[199,90,63],[232,155,60],[247,212,107]];
-function rampAt(t){t=Math.max(0,Math.min(1,t));const s=(RAMP.length-1)*t,i=Math.min(RAMP.length-2,Math.floor(s)),f=s-i,a=RAMP[i],b=RAMP[i+1];
-  return [Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];}
-function inPoly(x,y,p){let h=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];
-  if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))h=!h;}return h;}
-const LAT_TOP=82,LAT_BOT=-58,STEP=2,SIGMA=8;
-let DOTS=null, markers=[];
-const MARKS = CMAP.filter(c=>CCOUNT[c[0]]).map(c=>({n:c[0],lon:c[1][0],lat:c[1][1],w:CCOUNT[c[0]]}));
-function buildDots(){
-  const d=[];
-  for(let lat=LAT_TOP;lat>=LAT_BOT;lat-=STEP) for(let lon=-180;lon<=180;lon+=STEP){
-    let land=false; for(let p=0;p<LAND.length;p++){ if(inPoly(lon,lat,LAND[p])){land=true;break;} }
-    if(!land) continue;
-    let h=0;
-    for(let k=0;k<MARKS.length;k++){const c=MARKS[k],dx=(lon-c.lon)*Math.cos(lat*Math.PI/180),dy=lat-c.lat;
-      h+=c.w*Math.exp(-(dx*dx+dy*dy)/(2*SIGMA*SIGMA));}
-    d.push({lon:lon,lat:lat,h:h});
-  }
-  const m=d.reduce((x,o)=>Math.max(x,o.h),0)||1; d.forEach(o=>o.t=Math.pow(o.h/m,.62)); return d;
-}
-const cvs=$("#worldmap"),ctx=cvs.getContext("2d"),tip=$("#maptip");
-function drawMap(){
-  const W=Math.max(360,cvs.parentElement.clientWidth-20), H=Math.round(W*(LAT_TOP-LAT_BOT)/360), dpr=window.devicePixelRatio||1;
-  cvs.width=W*dpr; cvs.height=H*dpr; cvs.style.width=W+"px"; cvs.style.height=H+"px"; ctx.setTransform(dpr,0,0,dpr,0,0);
-  const X=l=>(l+180)/360*W, Y=l=>(LAT_TOP-l)/(LAT_TOP-LAT_BOT)*H;
-  ctx.fillStyle="#0A1215"; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle="rgba(120,150,160,.055)"; ctx.lineWidth=1;
-  for(let l=-180;l<=180;l+=30){ctx.beginPath();ctx.moveTo(X(l),0);ctx.lineTo(X(l),H);ctx.stroke();}
-  for(let l=60;l>=-40;l-=30){ctx.beginPath();ctx.moveTo(0,Y(l));ctx.lineTo(W,Y(l));ctx.stroke();}
-  if(!DOTS) DOTS=buildDots();
-  const cell=W/360*STEP;
-  DOTS.forEach(d=>{
-    const r=cell*(.30+d.t*.36);
-    if(d.t<.035) ctx.fillStyle="rgba(112,140,148,.30)";
-    else{const c=rampAt(d.t); ctx.fillStyle="rgba("+c[0]+","+c[1]+","+c[2]+","+(0.55+d.t*0.45).toFixed(3)+")";}
-    ctx.beginPath(); ctx.arc(X(d.lon),Y(d.lat),Math.max(.7,r),0,Math.PI*2); ctx.fill();
-  });
-  markers=[];
-  const wmax=Math.max.apply(null,MARKS.map(m=>m.w));
-  MARKS.forEach(c=>{
-    const x=X(c.lon),y=Y(c.lat),r=2.6+Math.sqrt(c.w/wmax)*7.5;
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-    ctx.strokeStyle="rgba(247,212,107,"+(.24+.42*c.w/wmax).toFixed(3)+")"; ctx.lineWidth=1; ctx.stroke();
-    ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fillStyle="rgba(255,236,180,.85)"; ctx.fill();
-    markers.push({x:x,y:y,r:Math.max(r,9),c:c});
-  });
-  ctx.font="500 10px 'IBM Plex Mono', monospace"; ctx.fillStyle="rgba(226,234,231,.62)";
-  MARKS.slice().sort((a,b)=>b.w-a.w).slice(0,8).forEach(c=>{
-    const x=X(c.lon),y=Y(c.lat); ctx.textAlign=x>W-70?"right":"left";
-    ctx.fillText(c.n,x+(x>W-70?-11:11),y+3.5);
-  });
-}
-cvs.addEventListener("mousemove",e=>{
-  const b=cvs.getBoundingClientRect(),mx=e.clientX-b.left,my=e.clientY-b.top;
-  let hit=null,best=1e9;
-  markers.forEach(m=>{const d=Math.hypot(m.x-mx,m.y-my); if(d<m.r&&d<best){best=d;hit=m;}});
-  if(hit){ tip.classList.add("on"); tip.style.left=(hit.x+cvs.offsetLeft)+"px"; tip.style.top=(hit.y+cvs.offsetTop)+"px";
-    tip.querySelector(".n").textContent=hit.c.n; tip.querySelector(".d").textContent="關聯鍊 "+hit.c.w+" 條";
-    cvs.style.cursor="crosshair";
-  } else { tip.classList.remove("on"); cvs.style.cursor="default"; }
-});
-cvs.addEventListener("mouseleave",()=>tip.classList.remove("on"));
-
-/* ── 表格 ── */
-function rowHTML(r, full){
-  const oc = r.oc ? '<span style="color:'+OC[r.oc][1]+';font-family:var(--mono);font-size:11.5px">'+OC[r.oc][0]+'</span>' : '<span style="color:var(--faint)">—</span>';
-  return '<tr data-id="'+esc(r.cid)+'">'+
-    '<td class="cid">'+esc(r.cid)+'</td>'+
-    '<td style="max-width:430px"><div class="cname">'+esc(r.stmt)+'</div>'+
-      (r.domA.length?'<div class="ctags">'+esc(r.domA.join(" · "))+'</div>':'')+'</td>'+
-    '<td><span class="num">'+(r.age==null?"—":r.age)+'</span>'+
-      (r.age!=null?'<div class="lenbar"><i style="width:'+(r.age/maxAge*100).toFixed(1)+'%"></i></div>':'')+'</td>'+
-    (full?'<td class="num" style="color:var(--muted)">v'+r.v+'</td>':'')+
-    '<td>'+chip(r)+'</td>'+
-    '<td><div class="prob" style="color:'+probColor(r.p)+'">'+r.p+'%</div><div class="word">'+wordOf(r.p)+'</div></td>'+
-    (full?'<td>'+oc+'</td>':'')+
-    '<td class="cid">'+(r.we||r.ws||"—")+'</td>'+
-  '</tr>';
-}
-function bind(sel){ $$(sel+" tr[data-id]").forEach(tr=>tr.addEventListener("click",()=>{go("chains");openChain(tr.dataset.id);})); }
-
-const live = R.filter(r=>r.track==="追蹤中"||r.track==="待驗證").sort((a,b)=>(D(b.upd)||0)-(D(a.upd)||0));
-$("#dashrows").innerHTML = live.slice(0,20).map(r=>rowHTML(r,false)).join("");
-bind("#dashrows");
-
-/* ── 篩選 ── */
-const DOMS = Array.from(new Set(R.flatMap(r=>r.domA))).sort();
-let filt={st:"all",dom:"all",q:""};
-$("#f-status").insertAdjacentHTML("beforeend",[["all","全部"]].concat(Object.keys(ST).filter(k=>k).map(k=>[k,ST[k].lab])).concat([["_none","未標記"]])
-  .map(([k,l])=>'<button class="pill" data-k="'+k+'" aria-pressed="'+(k==="all")+'">'+l+'</button>').join(""));
-$("#f-dom").insertAdjacentHTML("beforeend",[["all","全部"]].concat(DOMS.map(d=>[d,d]))
-  .map(([k,l])=>'<button class="pill" data-k="'+esc(k)+'" aria-pressed="'+(k==="all")+'">'+esc(l)+'</button>').join(""));
-$$("#f-status .pill").forEach(b=>b.addEventListener("click",()=>{filt.st=b.dataset.k;$$("#f-status .pill").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));renderChains();}));
-$$("#f-dom .pill").forEach(b=>b.addEventListener("click",()=>{filt.dom=b.dataset.k;$$("#f-dom .pill").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));renderChains();}));
-$("#f-q").addEventListener("input",e=>{filt.q=e.target.value.trim();renderChains();});
-
-function matches(r){
-  if(filt.st==="_none"){ if(r.track) return false; }
-  else if(filt.st!=="all" && r.track!==filt.st) return false;
-  if(filt.dom!=="all" && r.domA.indexOf(filt.dom)<0) return false;
-  if(filt.q && (r.stmt+" "+r.cid).indexOf(filt.q)<0) return false;
-  return true;
-}
-$("#ledgernote").textContent = R.length+" 條鍊 · "+L.meta.snapshots+" 版快照 · 版本鏈快照制";
-function renderChains(){
-  const rows=R.filter(matches).sort((a,b)=>(D(b.upd)||0)-(D(a.upd)||0));
-  $("#fcount").textContent="顯示 "+rows.length+" / "+R.length+" 條事件鍊";
-  $("#chainrows").innerHTML = rows.length ? rows.map(r=>rowHTML(r,true)).join("")
-    : '<tr><td colspan="8" style="color:var(--faint);padding:26px 14px">沒有符合條件的事件鍊。放寬篩選條件再試。</td></tr>';
-  bind("#chainrows");
-}
-
-/* ── 細節 ── */
-function parseTraj(s){
-  if(!s) return [];
-  return s.split(",").map(x=>{const p=x.split(":");return {v:+p[0],d:p[1],p:+p[2]};}).sort((a,b)=>a.v-b.v);
-}
-function openChain(id){
-  const r=R.find(x=>x.cid===id); if(!r) return;
-  const t=parseTraj(r.traj);
-  const lo=t.length?Math.min.apply(null,t.map(x=>x.p)):r.p, hi=t.length?Math.max.apply(null,t.map(x=>x.p)):r.p;
-  const tl = t.length ? t.map((x,i)=>{
-    const prev=i?t[i-1].p:null, cls=i===0?"first":(prev!==null&&x.p>prev?"up":(prev!==null&&x.p<prev?"down":""));
-    return '<div class="tlitem '+cls+'"><div class="when">'+(x.d||"日期未填")+'<b>v'+x.v+'</b></div>'+
-      '<div class="what">機率 '+x.p+'%（'+wordOf(x.p)+'）'+
-      (prev!==null&&x.p!==prev?'<span class="delta">'+prev+'% → '+x.p+'%</span>':'')+'</div></div>';
-  }).join("") : '<p style="color:var(--faint);font-size:13px;margin:14px 0 0">此鍊的逐版軌跡未納入公開子集(版本數 '+r.v+',快照 '+r.n+' 筆)。</p>';
-  const spark = t.length>1 ? '<div class="calbar">'+t.map(x=>'<div class="calcol"><i style="height:'+x.p+'%"></i></div>').join("")+'</div>' : '';
-  $("#chains-detail").innerHTML =
-   '<button class="back" id="backbtn">← 返回事件鍊總表</button>'+
-   '<div class="dhead"><span class="cid">'+esc(r.cid)+'</span> '+chip(r)+
-     '<h3>'+esc(r.stmt)+'</h3>'+
-     '<div class="dfacts">'+
-       '<div class="dfact"><div class="k">鍊齡</div><div class="v">'+(r.age==null?"—":r.age+" 日")+'</div></div>'+
-       '<div class="dfact"><div class="k">建立</div><div class="v">'+(r.c0||"—")+'</div></div>'+
-       '<div class="dfact"><div class="k">最近更新</div><div class="v">'+(r.upd||"—")+'</div></div>'+
-       '<div class="dfact"><div class="k">驗證視窗</div><div class="v" style="font-size:12px">'+(r.ws||"—")+(r.we?" → "+r.we:"")+'</div></div>'+
-       '<div class="dfact"><div class="k">最新機率</div><div class="v" style="color:'+probColor(r.p)+'">'+r.p+'%</div></div>'+
-       '<div class="dfact"><div class="k">機率區間</div><div class="v">'+lo+'–'+hi+'%</div></div>'+
-       '<div class="dfact"><div class="k">版本 / 快照</div><div class="v">v'+r.v+' / '+r.n+'</div></div>'+
-       '<div class="dfact"><div class="k">結果</div><div class="v" style="font-size:12px;'+(r.oc?'color:'+OC[r.oc][1]:'')+'">'+(r.oc?OC[r.oc][0]:"未結案")+'</div></div>'+
-     '</div></div>'+
-   '<div class="dcols">'+
-     '<div class="panel"><div class="panel-h"><h3>機率軌跡</h3><span class="note">每一版都是不可覆蓋的獨立快照</span></div>'+
-       spark+'<div class="spark"><div class="tl">'+tl+'</div></div></div>'+
-     '<div class="panel"><div class="panel-h"><h3>本鍊可公開的欄位</h3></div>'+
-       '<div class="lists">'+
-         '<h4>影響面</h4>'+(r.domA.length?'<div class="linkchips">'+r.domA.map(d=>'<span class="linkchip">'+esc(d)+'</span>').join("")+'</div>':'<p>未標記</p>')+
-         '<h4 style="margin-top:18px">命題提及的國家(文字比對推得)</h4>'+
-           (r.cs.length?'<div class="linkchips">'+r.cs.map(c=>'<button class="linkchip" data-c="'+esc(c)+'">'+esc(c)+'</button>').join("")+'</div>':'<p>未比對到已知國名</p>')+
-         '<h4 style="margin-top:18px">不在公開範圍</h4>'+
-         '<p>觸發指標(命中／反向判準)、版本說明(建鏈理由)、校準備註(回測推理)、對應情境、來源分析——這五欄留在原帳本,不隨本站發佈。</p>'+
-       '</div></div>'+
-   '</div>';
-  $("#chains-list").style.display="none"; $("#chains-detail").style.display="block";
-  $("#crumb").textContent="事件鍊 · "+r.cid;
-  $("#backbtn").addEventListener("click",closeChain);
-  $$("#chains-detail .linkchip[data-c]").forEach(b=>b.addEventListener("click",()=>{go("countries");selectCountry(b.dataset.c);}));
-  window.scrollTo(0,0);
-}
-function closeChain(){ $("#chains-detail").style.display="none"; $("#chains-list").style.display="block"; $("#crumb").textContent=CRUMB.chains; }
-
-/* ── 國家背景基準 ── */
-const CNAMES = Object.keys(CCOUNT).sort((a,b)=>CCOUNT[b]-CCOUNT[a]);
-$("#clist").innerHTML = CNAMES.map(n=>'<button data-c="'+esc(n)+'" aria-pressed="false"><span class="cn">'+esc(n)+'</span><span class="cm">'+CCOUNT[n]+' 條關聯鍊</span></button>').join("");
-$$("#clist button").forEach(b=>b.addEventListener("click",()=>selectCountry(b.dataset.c)));
-function selectCountry(n){
-  $$("#clist button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.c===n)));
-  const rows=R.filter(r=>r.cs.indexOf(n)>=0);
-  const res=rows.filter(r=>r.ov!==null&&r.ov!==undefined);
-  const hr=res.length?(res.reduce((s,r)=>s+r.ov,0)/res.length*100).toFixed(0):"—";
-  const br=res.length?(res.reduce((s,r)=>s+Math.pow(r.p/100-r.ov,2),0)/res.length).toFixed(3):"—";
-  const dc={}; rows.forEach(r=>r.domA.forEach(d=>dc[d]=(dc[d]||0)+1));
-  const doms=Object.keys(dc).sort((a,b)=>dc[b]-dc[a]);
-  const avg=rows.length?Math.round(rows.reduce((s,r)=>s+r.p,0)/rows.length):0;
-  $("#cbody").innerHTML =
-    '<h3>'+esc(n)+'</h3><div class="role">出現於 '+rows.length+' 條事件鍊 · 由命題文字比對推得</div>'+
-    '<div class="csec"><h4>帳本上的樣子</h4><div class="minigrid">'+
-      '<div><div class="k">關聯鍊</div><div class="v">'+rows.length+'</div></div>'+
-      '<div><div class="k">追蹤中</div><div class="v">'+rows.filter(r=>r.track==="追蹤中").length+'</div></div>'+
-      '<div><div class="k">已結案</div><div class="v">'+res.length+'</div></div>'+
-      '<div><div class="k">命中率</div><div class="v" style="color:var(--h5)">'+hr+(hr==="—"?"":"%")+'</div></div>'+
-      '<div><div class="k">Brier</div><div class="v">'+br+'</div></div>'+
-      '<div><div class="k">平均機率</div><div class="v">'+avg+'%</div></div>'+
-    '</div></div>'+
-    '<div class="csec"><h4>集中在哪些影響面</h4><div class="linkchips">'+
-      (doms.length?doms.map(d=>'<span class="linkchip">'+esc(d)+' · '+dc[d]+'</span>').join(""):'<span class="linkchip">未標記</span>')+'</div></div>'+
-    '<div class="csec"><h4>相關事件鍊</h4><div class="tablewrap"><table><thead><tr><th>鍊 ID</th><th>命題</th><th>現況</th><th>機率</th></tr></thead><tbody>'+
-      rows.sort((a,b)=>(D(b.upd)||0)-(D(a.upd)||0)).map(r=>
-        '<tr data-id="'+esc(r.cid)+'"><td class="cid">'+esc(r.cid)+'</td><td style="max-width:380px"><div class="cname">'+esc(r.stmt)+'</div></td>'+
-        '<td>'+chip(r)+'</td><td><span class="prob" style="color:'+probColor(r.p)+'">'+r.p+'%</span></td></tr>').join("")+
-    '</tbody></table></div></div>';
-  bind("#cbody");
-}
-
-/* ── 分析缺口聲明(數字全部推導) ── */
-const nonStep = R.filter(r=>r.p%5!==0);
-const oldId = R.filter(r=>/^P-\d{4}-\d{2}$/.test(r.cid));
-const noTrack = R.filter(r=>!r.track);
-const noWin = R.filter(r=>!r.we);
-const overconf = R.filter(r=>r.p>=90);
-const resOver = resolved.filter(r=>r.p>=80);
-const overHit = resOver.length?(resOver.reduce((s,r)=>s+r.ov,0)/resOver.length*100).toFixed(0):"—";
-const resUnder = resolved.filter(r=>r.p<=35);
-const underHit = resUnder.length?(resUnder.reduce((s,r)=>s+r.ov,0)/resUnder.length*100).toFixed(0):"—";
-$("#doc").innerHTML =
- '<div class="doc-head"><p class="eyebrow">SKILL-11 分析缺口聲明 · 步驟十</p>'+
- '<h3>這份帳本哪裡站得住,哪裡不要當真</h3>'+
- '<div class="by">資料截止 '+ASOF+' · 涵蓋 '+R.length+' 條鍊 / '+L.meta.snapshots+' 版快照<br>'+
- '公開範圍:鍊層摘要與機率。判準正文、建鏈理由、回測推理不在其中。<br>'+
- '整體信心水準 <span style="color:var(--h4)">中</span> — 校準數字可信,但覆蓋完整性有明確缺口</div></div>'+
-
- '<p>不標記不確定性的分析是危險的:讀者會把所有判斷當成同等可靠。以下是這份帳本自己承認的問題,全部由本頁資料即時算出,不是人工挑選的。</p>'+
-
- '<h4><span class="no">一</span>資料完整性缺口</h4>'+
- '<div class="gap"><div><b>缺口 1|'+L.meta.unchained+' 版快照沒有鏈根</b><br>'+
-   '全帳本 '+L.meta.snapshots+' 版快照中,有 '+L.meta.unchained+' 版(約 '+Math.round(L.meta.unchained/L.meta.snapshots*100)+'%)的「原始預測 ID」是空的,無法歸屬到任何一條鍊。'+
-   '這代表本站呈現的 '+R.length+' 條鍊<b>不是帳本的全部</b>,而且缺的那部分無法被統計。'+
-   '<div class="why">可能填補方式:回頭替這些快照補鏈根,或確認它們是被廢棄的草稿</div></div><div class="imp high">影響<br>高</div></div>'+
-
- '<div class="gap"><div><b>缺口 2|'+noTrack.length+' 條鍊沒有追蹤狀態</b><br>'+
-   R.length+' 條鍊中有 '+noTrack.length+' 條既沒結案也沒降階,停在空白狀態。'+
-   '在冷鏈規則下,「沒有訊號」與「沒有人去看」在帳本上長得一模一樣——這正是紀律 20「資訊真空 ≠ 維持機率」要防的事。'+
-   '<div class="why">可能填補方式:逐條補判 A/B/C/D 處置,或明確標記為棄鏈</div></div><div class="imp high">影響<br>高</div></div>'+
-
- '<div class="gap"><div><b>缺口 3|兩套 ID 慣例把同一條鍊切成兩段</b><br>'+
-   '有 '+oldId.length+' 條鍊採舊制 <code style="font-family:var(--mono)">P-MMDD-NN</code>,其餘採新制 <code style="font-family:var(--mono)">P-YYYY-MMDD-NN</code>。'+
-   '部分邏輯上連續的鍊因此被拆成兩個鏈根(版本序會超過該鏈根底下的快照數),鍊齡與版本統計會低估。'+
-   '<div class="why">可能填補方式:合併鏈根並保留舊 ID 作為別名</div></div><div class="imp mid">影響<br>中</div></div>'+
-
- (nonStep.length?'<div class="gap"><div><b>缺口 4|'+nonStep.length+' 條鍊的機率不是 5% 步進</b><br>'+
-   '紀律 6 要求機率以 5% 步進登錄,以便 Brier 校準分組。目前有 '+nonStep.length+' 條違反('+nonStep.map(r=>esc(r.cid)+" "+r.p+"%").join("、")+')。'+
-   '<div class="why">可能填補方式:四捨五入到最近的 5%,並在版本說明註記修正</div></div><div class="imp low">影響<br>低</div></div>':'')+
-
- '<h4><span class="no">二</span>校準結果</h4>'+
- '<p>已結案 '+resolved.length+' 題,命中率 '+Math.round(hitRate*100)+'%,Brier '+brier.toFixed(3)+'。'+
- '但總分會騙人——真正有資訊的是敢押的那些題:</p>'+
- '<div class="panel" style="margin-top:14px"><div class="tablewrap"><table>'+
- '<thead><tr><th>分組</th><th>題數</th><th>實際發生率</th><th>讀法</th></tr></thead><tbody>'+
- '<tr><td>高信心(≥80%)</td><td class="num">'+resOver.length+'</td><td class="num">'+overHit+'%</td><td>若實際發生率明顯低於機率中位數,代表過度自信</td></tr>'+
- '<tr><td>低信心(≤35%)</td><td class="num">'+resUnder.length+'</td><td class="num">'+underHit+'%</td><td>若明顯高於機率,代表低估</td></tr>'+
- '<tr><td>目前仍押 ≥90%</td><td class="num">'+overconf.length+'</td><td class="num">—</td><td>紀律 17:≥90% 須通過可改寫性測試</td></tr>'+
- '</tbody></table></div></div>'+
-
- '<h4><span class="no">三</span>最可能的錯誤方向</h4>'+
- '<div class="wrongway"><p>如果這份帳本的校準數字錯了,最可能錯在:<b>已結案的那 '+resolved.length+' 題不是隨機樣本</b>。'+
- '會被結案的通常是視窗明確、判準乾淨的題;'+noTrack.length+' 條停在空白狀態的鍊很可能正是難判的那些,而它們完全沒有進到分母。</p>'+
- '<p>為什麼這個方向最容易出錯:它讓命中率與 Brier 同時往好的方向偏,而且偏得很安靜——'+
- '分子分母都只算「有結論的題」,看起來完全合理,直到你問一句「那沒結論的呢」。</p></div>'+
-
- '<h4><span class="no">四</span>公開範圍的自我限制</h4>'+
- '<div class="selfcheck">'+
- '<div><div class="t">已公開</div><div class="r">鍊層摘要</div><div class="d">命題、機率、機率軌跡、現況、影響面、驗證視窗、結果。</div></div>'+
- '<div><div class="t">未公開</div><div class="r flag">判準與推理</div><div class="d">觸發指標、版本說明、校準備註、對應情境、來源分析五欄不隨本站發佈。</div></div>'+
- '<div><div class="t">推導而非原始</div><div class="r flag">國家歸屬</div><div class="d">地圖與國家頁的歸屬由命題文字比對推得,帳本本身沒有國家欄位,會有漏判與誤判。</div></div>'+
+ IA.head("事件鍊","一個主要事件,底下掛著會改變後果機率的新聞")+
+ '<div class="dcl-panel-flush mk-void">'+
+   '<b>'+esc(EV.title)+'</b> — '+esc(EV.subtitle)+'<br>'+
+   EV.window[0]+' → '+EV.window[1]+' · '+EV.outcomes.length+' 種後果分支 · '+EV.news.length+' 則新聞。'+
+   '<span class="mk-void-sub">「事件鍊」指的是事件之間的關係;同一句命題的逐版修訂請看<a href="chains/">預測鏈總表</a>。</span><br>'+
+   '<a href="events/'+EV.id+'/" style="display:inline-block;margin-top:10px">開啟事件鍊 →</a>'+
  '</div>'+
 
- '<div class="foot">本頁為研判紀錄的公開檢視,<b>不構成投資、法律或任何決策建議</b>。機率為主觀判斷的登錄值,不是事件的客觀發生率。<br>'+
- '資料來源:作者自建之預測驗證資料庫,匯出於 '+ASOF+'。方法論見 skills/intel-analysis(SKILL-01…20,23 條核心紀律)。</div>';
+ IA.head("預測鏈地理熱度","熱度 = 命題文字提及該國的鏈數(文字比對推得,非帳本原始欄位)")+
+ '<div class="dcl-panel-flush mk-mapbox">'+
+   '<canvas id="worldmap"></canvas>'+
+   '<div class="mk-tip" id="maptip"><div class="n"></div><div class="d"></div></div>'+
+   '<div class="mk-maplegend"><span class="mk-maplab">關聯鏈數 少</span><span class="mk-ramp"></span>'+
+     '<span class="mk-maplab">多</span>'+
+     '<span class="mk-maplab" style="margin-left:12px;color:var(--accent)">○ 標記＝被提及的國家</span></div>'+
+ '</div>'+
+ '<p class="mk-note"><b>組織、區域與海域不落在地圖上。</b>「北約」不是歐盟、「南海」不是菲律賓、'+
+   '「朝鮮半島」不是韓國、「裡海」在命中的那一句裡講的是俄伊物流。'+
+   '這些詞各自計數但不畫點——一顆點畫在錯的位置,讀者看不出來:'+
+   NS.map(function(x){return esc(x[0])+' <em>'+x[1]+'</em>';}).join(" · ")+'</p>'+
 
-/* ── 導覽 ── */
-const CRUMB={dash:"戰情儀表板",chains:"事件鍊總表",countries:"國家背景基準",statement:"分析缺口聲明"};
-$$("#nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
-function go(v){
-  $$("#nav button").forEach(b=>b.setAttribute("aria-current",String(b.dataset.view===v)));
-  $$(".view").forEach(s=>s.classList.toggle("on",s.id==="view-"+v));
-  $("#crumb").textContent=CRUMB[v]; window.scrollTo(0,0);
-}
+ IA.head("追蹤中的鏈","依最後修訂排序 · 取最近 "+live.length+" 條")+
+ '<div class="dcl-table-scroll"><table class="mk-t">'+
+   '<thead><tr><th>鏈</th><th>陳述句</th><th>影響面</th><th>初始 → 最新</th><th>狀態</th><th>驗證窗口</th></tr></thead>'+
+   '<tbody>'+live.map(function(r){
+     return '<tr class="is-link is-'+IA.stCls(r)+'" data-id="'+esc(r.cid)+'">'+
+       '<td><span class="mk-id">'+esc(r.cid)+'</span></td>'+
+       '<td class="mk-stmt">'+esc(r.stmt)+IA.flagChips(r)+'</td>'+
+       '<td>'+(r.domA.length?r.domA.map(function(d){return '<span class="dcl-domain">'+esc(d)+'</span>';}).join(""):'<span class="dcl-empty">未記錄</span>')+'</td>'+
+       '<td class="mk-num">'+IA.probCell(r)+'</td>'+
+       '<td><span class="mk-state is-'+IA.stCls(r)+'">'+esc(IA.stLab(r))+'</span></td>'+
+       '<td class="mk-num">'+(r.ws||"未記錄")+' → '+(r.we||"未記錄")+'</td></tr>';}).join("")+
+ '</tbody></table></div>';
 
-renderChains();
-selectCountry(CNAMES[0]);
-drawMap();
-let rt; window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawMap,140);});
-if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawMap);
+Array.prototype.forEach.call(main.querySelectorAll("tr[data-id]"),function(tr){
+  tr.addEventListener("click",function(){location.href="chains/?c="+encodeURIComponent(tr.dataset.id);});});
+window.drawGeoMap(document.getElementById("worldmap"),document.getElementById("maptip"),GC);
 </script>
 </body>
 </html>

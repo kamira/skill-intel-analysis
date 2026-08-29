@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>國家背景基準 — 情報分析工作台</title>
+<meta name="description" content="各國利益卡片的結構與完整度:哪幾節寫了、每節幾條、最後編輯於何時。卡片條文不在公開範圍。">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="../actors.js"></script>
+<script src="../assets/chrome.js"></script>
+<script>
+"use strict";
+var IA=window.IA, R=IA.R, esc=IA.esc, A=window.ACTORS, SEC=A.meta.sections, SHORT=A.meta.short;
+var main=IA.chrome({section:"國家背景基準",here:"actors/",depth:1,
+  note:"各國長期利益卡片的結構與完整度",kind:"分析前提"});
+
+var full=A.cards.filter(function(c){return c.status==="full";}).length;
+var stale=A.cards.filter(function(c){return c.edited<IA.L.meta.span[1];}).length;
+
+function chains(name){
+  return R.filter(function(r){return r.actors.indexOf(name)>=0;});
+}
+
+function card(c){
+  var filled=c.n.filter(function(v){return v>0;}).length;
+  var total=c.n.reduce(function(s,v){return s+v;},0);
+  var ex=c.extra.reduce(function(s,e){return s+e[1];},0);
+  var rows=chains(c.name), sc=rows.filter(function(r){return r.scored;});
+  return '<div class="mk-card is-'+c.status+'" id="'+esc(c.name)+'">'+
+    '<div class="mk-card-h"><span class="mk-card-flag">'+c.flag+'</span>'+
+      '<span class="mk-card-n">'+esc(c.name)+'</span></div>'+
+    '<div class="mk-axes">'+SEC.map(function(s,i){
+      return '<div class="mk-axis'+(c.n[i]?" on":"")+'" title="'+esc(s)+'">'+
+        '<span class="mk-axis-k">'+esc(SHORT[i])+'</span>'+
+        '<span class="mk-axis-bar"></span>'+
+        '<span class="mk-axis-n">'+(c.n[i]?c.n[i]+" 條":"未寫入")+'</span></div>';}).join("")+
+      (c.extra.length?c.extra.map(function(e){
+        return '<div class="mk-axis on" title="'+esc(e[0])+'(本卡自訂節)">'+
+          '<span class="mk-axis-k">＋專章</span><span class="mk-axis-bar"></span>'+
+          '<span class="mk-axis-n">'+e[1]+' 條</span></div>';}).join(""):'')+
+    '</div>'+
+    '<div class="mk-cov-lab">'+
+      (c.status==="blocked" ? '待整理 · 禁止參照'
+        : filled+'/8 節 · '+total+' 條'+(ex?' ＋'+ex+' 條專章':''))+
+    '</div>'+
+    '<div class="mk-card-lead">帳本關聯鏈 '+rows.length+' 條'+(sc.length?' · 已計分 '+sc.length:'')+
+      ' · Notion 最後編輯 '+esc(c.edited)+'</div>'+
+  '</div>';
+}
+
+main.innerHTML =
+ '<div class="mk-hero"><div class="mk-hero-kicker">國家背景基準</div>'+
+   '<h1>各國利益卡片</h1>'+
+   '<p>各國的長期利益、制度限制、常用手段與可修正訊號。這是<b>分析前提</b>,不是當日結論;'+
+   '若當日新訊號與基準衝突,以新訊號優先修正判斷。</p>'+
+   '<div class="mk-hero-meta">'+
+     '<div><span class="k">卡片</span><span class="v">'+A.cards.length+'</span></div>'+
+     '<div><span class="k">八節齊全</span><span class="v">'+full+'</span></div>'+
+     '<div><span class="k">部分待驗證</span><span class="v">'+A.cards.filter(function(c){return c.status==="partial";}).length+'</span></div>'+
+     '<div><span class="k">待整理·禁止參照</span><span class="v">'+A.cards.filter(function(c){return c.status==="blocked";}).length+'</span></div>'+
+   '</div></div>'+
+ '<div class="mk-lede">'+
+   '<p><b>這一頁呈現的是卡片的結構與完整度,不是卡片的條文。</b>'+
+   '每張卡片有八節:'+SEC.join("、")+'。'+
+   '本頁列出每一節寫了幾條、哪幾節是空的、以及該卡片最後編輯於何時。條文本身留在原帳本。</p>'+
+   '<p>為什麼結構本身就有資訊:一張只寫了核心利益的卡片,與一張八節齊全的卡片,'+
+   '在畫面上如果長得一樣,讀者就無從判斷對某個行為者的解讀有多少基準可靠。'+
+   '<b>薄的那一張必須看起來就是薄的。</b></p>'+
+ '</div>'+
+
+ IA.head("使用原則","母頁自訂,逐條原文")+
+ '<div class="dcl-panel-flush"><div class="mk-sec"><ul>'+
+   A.principles.map(function(p){return '<li>'+esc(p)+'</li>';}).join("")+
+ '</ul></div></div>'+
+
+ IA.head("卡片","色條 = 該節已寫入 · 右側為條目數")+
+ '<div class="mk-cards">'+A.cards.map(card).join("")+'</div>'+
+ '<p class="mk-note"><b>印度整張是灰的。</b>母頁規則寫著「標記為待整理的國家,不納入分析、比較、推導與輸出,'+
+ 'AI 禁止參照其內容」——站台照著這條規則做,而不是把它當成註解。</p>'+
+
+ IA.head("卡片與帳本的時間差","基準有沒有跟上局勢")+
+ '<div class="dcl-panel-flush mk-void">'+
+   '<b>'+stale+' 張卡片的最後編輯日早於帳本的資料截止日。</b>'+
+   '帳本涵蓋到 '+IA.L.meta.span[1]+',而卡片多數停在 '+A.cards[0].edited+'。'+
+   '這代表機率是照著更新的訊號在動,而它們所倚賴的長期基準沒有跟著動。'+
+   '<span class="mk-void-sub">這不是站台的錯誤,是帳本的現況。寫在這裡是因為它會改變讀者對這些卡片的信任程度。</span>'+
+ '</div>'+
+
+ '<p class="mk-note"><b>「帳本關聯鏈」是推導,不是原始欄位。</b>'+
+ '帳本沒有行為者欄位,關聯鏈數由命題文字比對推得,會有漏判與誤判;'+
+ '節名與條目數則是卡片本身的結構,逐項對照而來。</p>';
+
+if(location.hash){
+  var el=document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if(el){ el.scrollIntoView({block:"center"}); el.style.borderColor="var(--accent)"; }
+}
+</script>
+</body>
+</html>
