@@ -26,6 +26,7 @@ window.EVENT_META = {
     ]
   },
   "russia-ukraine": { subtitle: "俄烏正面戰事、烏方對俄後勤與能源縱深打擊,以及西方制裁與軍援的宣示與執行落差", news: [] },
+  "yemen-redsea": { subtitle: "胡塞對沙烏地本土與紅海航運的打擊,以及沙國與葉門本地武裝的反制", news: [] },
   "israel-levant": { subtitle: "以色列在黎巴嫩與加薩的軍事行動、外交孤立,以及美以之間的協調與張力", news: [] },
   "indo-pacific":  { subtitle: "台海與南海的軍事與法律施壓、印太多邊安全協作,以及中美科技與秩序博弈", news: [] },
   "europe-security": { subtitle: "北約東翼防務、歐盟能源韌性與制裁機制,以及內部制度張力", news: [] },
