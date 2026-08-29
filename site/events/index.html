@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>事件鍊 — 情報分析工作台</title>
-<meta name="description" content="一個主要事件,底下掛著會改變後果機率的新聞,以及它推動的每一種後果。">
+<meta name="description" content="八個主要事件,底下掛著它們的後果分支;每一條分支是一串續鏈,不是一條命題。">
 <meta name="robots" content="index, follow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,33 +14,48 @@
 <body>
 <script src="../data.js"></script>
 <script src="../actors.js"></script>
+<script src="../lineage.js"></script>
+<script src="../topics.js"></script>
 <script src="../events.js"></script>
 <script src="../assets/chrome.js"></script>
 <script>
 "use strict";
-var IA=window.IA, R=IA.R, esc=IA.esc;
-var main=IA.chrome({section:"事件鍊",here:"events/",depth:1,
-  note:"主要事件清單",kind:"索引"});
+var IA=window.IA, R=IA.R, esc=IA.esc, G=IA.groups();
+var main=IA.chrome({section:"事件鍊",here:"events/",depth:1,note:"主要事件清單",kind:"索引"});
+var declared=G.edges.filter(function(e){return e[2]==="declared";}).length;
+var inferred=G.edges.length-declared;
 
 main.innerHTML =
- IA.head("事件鍊","一個主要事件 · 底下的新聞 · 它推動的每一種後果")+
- '<div class="mk-lede"><p><b>「事件鍊」在這裡只有一個意思:一個主要事件,底下掛著會改變後果機率的新聞。</b>'+
- '同一句命題的逐版修訂是另一件事,在<a href="../chains/">預測鏈總表</a>。</p></div>'+
+ IA.head("事件鍊","一個主要事件 · 底下的後果分支 · 每條分支是一串續鏈")+
+ '<div class="mk-lede">'+
+   '<p><b>「事件鍊」在這裡只有一個意思:一個主要事件,底下掛著會改變後果機率的新聞與分支。</b>'+
+   '同一句命題的逐版修訂是另一件事,在<a href="../chains/">預測鏈總表</a>。</p>'+
+   '<p>分支怎麼來的:分析者結案一條鏈之後,常常另起新鏈接續同一個現象——'+
+   '<b>那些鏈在這裡被收回同一條分支,以最早的那一條為名。</b>兩種收法都用上了:'+
+   '<em>續鏈宣告</em>('+G.edges.length+' 條邊,其中 '+declared+' 條原文直接寫出母鏈 ID、'+inferred+' 條以主題名稱呼而由本站對回),'+
+   '以及 <em>ID 慣例配對</em>('+G.twins.length+' 對——舊制 <code>P-MMDD-NN</code> 與新制 <code>P-YYYY-MMDD-NN</code> '+
+   '本來就是同一條邏輯鏈,被 ID 慣例切成兩個鏈根,見<a href="../declaration/">缺口聲明</a>)。</p>'+
+ '</div>'+
+
+ IA.head("主要事件",R.length+" 條鏈全部歸位 · 依鏈數排序")+
  '<div class="dcl-table-scroll"><table class="mk-t">'+
- '<thead><tr><th>主要事件</th><th>期間</th><th>後果分支</th><th>新聞</th><th>狀態</th></tr></thead><tbody>'+
- window.EVENTS.map(function(e){
-   return '<tr class="is-link" data-h="'+esc(e.id)+'/"><td class="mk-stmt">'+
-     '<span class="mk-id">'+esc(e.title)+'</span> — '+esc(e.subtitle)+'</td>'+
-     '<td class="mk-num">'+e.window[0]+' → '+e.window[1]+'</td>'+
-     '<td class="mk-num">'+e.outcomes.length+'</td><td class="mk-num">'+e.news.length+'</td>'+
-     '<td><span class="mk-state is-open">已建</span></td></tr>';}).join("")+
- window.EVENTS_PENDING.map(function(t){
-   return '<tr><td class="mk-stmt">'+esc(t)+'</td><td class="dcl-empty">—</td>'+
-     '<td class="dcl-empty">—</td><td class="dcl-empty">—</td>'+
-     '<td><span class="mk-state is-not-recorded">未建</span></td></tr>';}).join("")+
+ '<thead><tr><th>主要事件</th><th>預測鏈</th><th>後果分支</th><th>多鏈分支</th><th>已計分</th><th>新聞</th></tr></thead><tbody>'+
+ G.events.slice().sort(function(a,b){return b.chains.length-a.chains.length;}).map(function(e){
+   var m=window.EVENT_META[e.id]||{subtitle:"",news:[]};
+   return '<tr class="is-link" data-h="'+esc(e.id)+'/">'+
+     '<td class="mk-stmt"><span class="mk-id">'+esc(e.title)+'</span><div style="color:var(--muted);font-size:11.5px;margin-top:4px">'+esc(m.subtitle)+'</div></td>'+
+     '<td class="mk-num">'+e.chains.length+'</td>'+
+     '<td class="mk-num">'+e.branches.length+'</td>'+
+     '<td class="mk-num">'+e.multi.length+'</td>'+
+     '<td class="mk-num">'+e.scored.length+'</td>'+
+     '<td class="mk-num">'+(m.news.length||'<span class="dcl-empty">未整理</span>')+'</td></tr>';
+ }).join("")+
  '</tbody></table></div>'+
- '<p class="mk-note">其他三條列出來但不補假資料。<b>一個列了四條、其中三條是編的索引,比一條真的更糟</b>'+
- '——讀者無從分辨哪一條可信。</p>';
+ '<p class="mk-note"><b>「多鏈分支」是這一頁最值得看的一欄。</b>它數的是被續鏈串起來、'+
+ '跨越至少一次結案的分支——那些才是真的持續了一段時間的判斷。'+
+ '只有一條鏈的分支多半是開了一次就沒有下文,不論它現在的機率是多少。</p>'+
+ '<p class="mk-note">目前只有一個主要事件整理了底下的新聞。'+
+ '其餘的機率曲線是真的,推動它的新聞還沒被逐日對上——<b>列一份猜的新聞比空著更糟</b>。</p>';
 
 Array.prototype.forEach.call(main.querySelectorAll("tr[data-h]"),function(tr){
   tr.addEventListener("click",function(){location.href=tr.dataset.h;});});

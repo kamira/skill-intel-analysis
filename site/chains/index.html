@@ -191,8 +191,11 @@ function showList(){
   main.innerHTML=listView(); bindFilters(); renderRows(); scrollTo(0,0);
 }
 
-var q=new URLSearchParams(location.search).get("c");
+var sp=new URLSearchParams(location.search);
+var q=sp.get("c"), pre=sp.get("q");
+if(pre) filt.q=pre;
 showList();
+if(pre){ var box=document.getElementById("f-q"); if(box) box.value=pre; }
 if(q) open(q);
 </script>
 </body>
