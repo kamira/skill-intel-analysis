@@ -86,6 +86,7 @@
     { label: "事件鍊", path: "events/" },
     { label: "預測鏈總表", path: "chains/" },
     { label: "國家背景基準", path: "actors/" },
+    { label: "週分析", path: "weekly/" },
     { label: "缺口聲明", path: "declaration/" }
   ];
 
@@ -112,7 +113,10 @@
         '<main id="main"></main>' +
         '<footer class="dcl-region-footer">' +
           '<span>OSINT · 僅新聞報導 · 非投資建議</span>' +
-          '<span>資料截止 ' + ASOF + ' · 公開子集:鏈層摘要與機率</span>' +
+          /* 頁尾講的是「這一頁的資料到哪一天、公開了什麼」。週分析與帳本的截止日不同,
+             共用一句會讓其中一頁說謊,所以由呼叫端覆寫。 */
+          '<span>資料截止 ' + esc(o.asof || ASOF) + ' · 公開子集:' +
+            esc(o.scope || '鏈層摘要與機率') + '</span>' +
         '</footer>' +
       '</div>');
     return document.getElementById("main");

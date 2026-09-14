@@ -34,7 +34,7 @@ python3 tools/tools_drift_check.py > /dev/null
 echo "[5/7] 公開範圍閘:綠燈可達"
 python3 .github/scope_guard.py > /dev/null
 
-echo "[6/7] 公開範圍閘:**紅燈也可達**(兩道各自被戳一次都必須轉紅)"
+echo "[6/7] 公開範圍閘:**紅燈也可達**(三道各自被戳一次都必須轉紅)"
 cp site/events.js /tmp/verify_scope_events.bak
 cp site/actors.js /tmp/verify_scope_actors.bak
 trap 'cp /tmp/verify_drift.bak tools/autopilot/scripts/static_check.py;
@@ -56,6 +56,17 @@ if python3 .github/scope_guard.py > /dev/null 2>&1; then
   echo "    ❌ 卡片條文被倒進 actors.js 卻沒紅 —— 這道閘等於不存在"; exit 1
 fi
 cp /tmp/verify_scope_actors.bak site/actors.js
+# 戳三:週報原文被改動一個字(第三道用 Notion 端回報的字元數逐欄對帳)
+cp site/weekly.js /tmp/verify_scope_weekly.bak
+trap 'cp /tmp/verify_drift.bak tools/autopilot/scripts/static_check.py;
+      cp /tmp/verify_scope_events.bak site/events.js;
+      cp /tmp/verify_scope_actors.bak site/actors.js;
+      cp /tmp/verify_scope_weekly.bak site/weekly.js' EXIT
+sed -i '0,/"d": "/s//"d": "X/' site/weekly.js
+if python3 .github/scope_guard.py > /dev/null 2>&1; then
+  echo "    ❌ 週報原文被改過卻沒紅 —— 這道閘等於不存在"; exit 1
+fi
+cp /tmp/verify_scope_weekly.bak site/weekly.js
 python3 .github/scope_guard.py > /dev/null
 
 echo "[7/7] 其餘治理閘"

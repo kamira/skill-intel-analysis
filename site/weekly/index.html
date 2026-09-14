@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>週分析 — 情報分析工作台</title>
+<meta name="description" content="第 22–36 週共 15 篇週報:四情境機率畫在同一張折線圖上,並逐項列出十五週之間的格式落差。">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@500;600;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="../actors.js"></script>
+<script src="../weekly.js"></script>
+<script src="../assets/chrome.js"></script>
+<script src="../assets/weekly-lib.js"></script>
+<script>
+"use strict";
+var IA=window.IA, esc=IA.esc, K=window.WK, W=K.W, R=K.R, SCEN=K.SCEN, C=K.COLORS;
+var main=IA.chrome({section:"週分析",here:"weekly/",depth:1,
+  note:"每週一篇的情境變化與驗證",kind:"週報",
+  asof:window.WEEKLY.meta.span[1],scope:"四個資料庫欄位原文與屬性"});
+
+/* ── 四情境折線圖:十五週共用一組座標 ───────────────────── */
+var Wd=980,H=360,PL=44,PR=16,PT=26,PB=52;
+function x(i){ return PL+(Wd-PL-PR)*(R.length<2?0.5:i/(R.length-1)); }
+function y(p){ return PT+(H-PT-PB)*(1-p/100); }
+var grid=[0,25,50,75,100].map(function(g){
+  return '<line class="mk-grid-line" x1="'+PL+'" x2="'+(Wd-PR)+'" y1="'+y(g).toFixed(1)+
+    '" y2="'+y(g).toFixed(1)+'"/><text class="mk-axis-t" x="'+(PL-8)+'" y="'+(y(g)+3).toFixed(1)+
+    '" text-anchor="end">'+g+'%</text>';}).join("");
+var ticks=R.map(function(r,i){
+  return (i%2===0||i===R.length-1)
+    ? '<text class="mk-axis-t" x="'+x(i).toFixed(1)+'" y="'+(H-PB+28)+'" text-anchor="middle">'+r.w+'</text>'
+    : '';}).join("");
+/* 階梯而非斜線:一週的四情境機率在該週內是一個定值,下一篇週報才會改它。
+   用斜線把兩週連起來,等於畫出一段從未被登錄過的週中漸變。 */
+var lines=SCEN.map(function(name,si){
+  var d="", open=false, last=null, dots="";
+  R.forEach(function(r,i){
+    var v=r.sc[si];
+    if(v===null){ open=false; last=null; return; }          /* 沒寫就斷線,不跨過去 */
+    if(!open){ d+=" M "+x(i).toFixed(1)+" "+y(v).toFixed(1); open=true; }
+    else { d+=" L "+x(i).toFixed(1)+" "+y(last).toFixed(1)+
+                " L "+x(i).toFixed(1)+" "+y(v).toFixed(1); }
+    last=v;
+    dots+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="2.6" fill="'+C[si]+'">'+
+      '<title>'+esc(name)+' · 第 '+r.w+' 週 · '+v+'%'+(r.scNote?' · '+esc(r.scNote):'')+'</title></circle>';
+  });
+  return '<path class="mk-series" d="'+d.trim()+'" stroke="'+C[si]+'"/>'+dots;
+}).join("");
+var chart='<svg class="mk-chart" viewBox="0 0 '+Wd+' '+H+'" role="img" aria-label="'+
+  '第 22 至 36 週四情境機率折線圖,四條線共用同一組座標">'+grid+ticks+lines+'</svg>';
+var legend=SCEN.map(function(n,i){
+  var vals=R.map(function(r){return r.sc[i];}).filter(function(v){return v!==null;});
+  return '<span class="mk-lg"><i style="background:'+C[i]+'"></i>'+esc(n)+
+    ' <b>'+vals[vals.length-1]+'%</b><small>'+Math.min.apply(null,vals)+'–'+Math.max.apply(null,vals)+
+    '% · '+vals.length+'/'+R.length+' 週有值</small></span>';}).join("");
+
+/* ── 推導:格式落差 ─────────────────────────────────────── */
+var sums=R.map(K.sum);
+var exact=R.filter(function(r){return K.sum(r)===100;});
+var over=R.filter(function(r){return K.sum(r)>100;});
+var firstOver=over.length?over[0]:null;
+var vrU=K.used("vr"), cfU=K.used("cf");
+var kwNone=R.filter(function(r){return !r.kw||!r.kw.length;}).length;
+var noted=R.filter(function(r){return r.scNote;});
+var gaps=R.filter(function(r){return K.missing(r).length;});
+var convN={}; R.forEach(function(r){var k=K.conv(r);(convN[k]=convN[k]||[]).push(r.w);});
+var LEN=W.meta.fields.map(function(nm,i){ return {nm:nm, k:["d","p","a","f"][i], v:K.lens(["d","p","a","f"][i])}; });
+var totalChars=LEN.reduce(function(s,o){return s+o.v.all.reduce(function(a,b){return a+b;},0);},0);
+
+main.innerHTML =
+ '<div class="mk-hero"><div class="mk-hero-kicker">週分析</div>'+
+   '<h1>每週的情境變化與驗證</h1>'+
+   '<p>一篇週報做三件事:定調本週格局、把上一週寫下的四情境機率逐項裁決、'+
+   '再寫出因此要改的判準。<b>四情境機率是這個系列唯一從頭到尾都在的數字</b>,'+
+   '所以十五週的它們畫在同一張圖上。</p>'+
+   '<div class="mk-hero-meta">'+
+     '<div><span class="k">週報</span><span class="v">'+R.length+'</span></div>'+
+     '<div><span class="k">涵蓋</span><span class="v">第 '+R[0].w+'–'+R[R.length-1].w+' 週</span></div>'+
+     '<div><span class="k">起訖</span><span class="v">'+esc(W.meta.span[0])+' → '+esc(W.meta.span[1])+'</span></div>'+
+     '<div><span class="k">四欄原文</span><span class="v">'+totalChars.toLocaleString()+' 字</span></div>'+
+     '<div><span class="k">風險強度</span><span class="v">'+
+       Math.min.apply(null,R.map(function(r){return r.rk;}))+'–'+
+       Math.max.apply(null,R.map(function(r){return r.rk;}))+'</span></div>'+
+   '</div></div>'+
+
+ '<div class="mk-lede">'+
+   '<p><b>本站公開的是每篇週報的四個資料庫欄位:'+W.meta.fields.join("、")+'。</b>'+
+   '每篇報告頁面本文的 '+W.meta.bodySections.length+' 個章節('+W.meta.bodySections.slice(0,4).join("、")+
+   '…)不在這裡,留在原帳本。</p>'+
+   '<p>原文一個字都沒有改寫。<b>「整理格式」做在版面與抽取上,不做在內容上</b>——'+
+   '四情境機率被抽成固定四欄以便比較,原文怎麼寫的同時列出;'+
+   '分段記號有五種寫法,這裡一律排成同一種版面。'+
+   '抽取過程中看見的十五週落差,列在下面〈格式落差〉,不藏起來。</p>'+
+ '</div>'+
+
+ IA.head("四情境機率","十五週共用一組座標 · 階梯線 · 缺值處斷線")+
+ '<div class="dcl-panel-flush mk-chartbox">'+chart+'<div class="mk-legend">'+legend+'</div></div>'+
+ '<p class="mk-note">橫軸是週次,不是日期——每週一篇,間距相等。'+
+ '線走階梯而不是斜線:<b>一週的機率在該週內是一個定值</b>,下一篇週報才會改它,中間沒有漸變。'+
+  gaps.map(function(r){
+   return '第 '+r.w+' 週的「'+K.missing(r).join("、")+'」線在該處斷開,因為原文沒有寫。';
+ }).join("")+'<b>斷線是真的,補一個 0 或補一條插值都是假的。</b></p>'+
+
+ IA.head("四情境的總和","同一個欄位,前五週是分割、後十週不是")+
+ '<div class="dcl-panel-flush mk-void">'+
+   '<b>前 '+exact.length+' 週(第 '+exact.map(function(r){return r.w;}).join("、")+' 週)的四情境恰好加總為 100%,'+
+   '此後每一週都超過。</b>'+
+   '第 '+(firstOver?firstOver.w:"—")+' 週首次超出('+(firstOver?K.sum(firstOver):"—")+'%),'+
+   '到第 '+R[R.length-1].w+' 週為 '+sums[sums.length-1]+'%,'+
+   '最高 '+K.round1(Math.max.apply(null,sums))+'%。'+
+   '這代表四情境從「互斥且窮盡的機率分割」變成「四個各自獨立的條件機率」——'+
+   '升溫情境自第 34 週起被拆成三個獨立引信,本來就可以與基準同時成立。'+
+   '<span class="mk-void-sub">這個性質變更從來沒有在欄位裡被宣告過。'+
+   '本站不改寫原文,也不把後十週的數字正規化成 100%:'+
+   '硬把它們縮成分割,會讓「基準 75%、升溫 50%」這種真的被寫下來的判斷消失。</span>'+
+ '</div>'+
+
+ IA.head("格式落差","十五週之間不一致的地方 · 全部由資料推導")+
+ '<div class="dcl-panel-flush"><div class="mk-sec"><ul>'+
+   '<li><b>四情境的寫法一路在漂,十五週裡有 '+noted.length+' 週與其他週不同。</b>'+
+     noted.map(function(r){return '第 '+r.w+' 週:'+esc(r.scNote);}).join(' ')+
+     '每一週的原文寫法都印在該週的頁面上。</li>'+
+   '<li><b>「上週預測摘要」的命名慣例換過兩次,欄位名稱卻沒變。</b>'+
+     K.convKeys.map(function(k){
+       return (convN[k]?'「'+K.convLabel(k)+'」共 '+convN[k].length+' 週(第 '+convN[k].join("、")+' 週)':'');
+     }).filter(Boolean).join(';')+
+     '。這個欄位裝的是<b>上一週對「本週」的預測</b>,所以本站一律把它掛在報告自己的週次上,'+
+     '而不是掛在它提到的那個週次上。</li>'+
+   '<li><b>信心度十五週完全相同。</b>範本開了 '+cfU.total+' 個選項,實際只用到 '+cfU.n+' 個:'+
+     cfU.order.map(function(v){return esc(v)+' × '+cfU.count[v];}).join("、")+
+     '。一個從未變動的信心度,不帶任何資訊。</li>'+
+   '<li><b>驗證結果只用了 '+vrU.n+'/'+vrU.total+' 個選項。</b>'+
+     vrU.order.map(function(v){return esc(v)+' × '+vrU.count[v];}).join("、")+
+     ';「'+W.meta.opts.vr.filter(function(v){return vrU.order.indexOf(v)<0;}).join("」、「")+
+     '」十五週一次都沒出現過。</li>'+
+   '<li><b>關鍵字全空。</b>範本要求「'+esc(W.meta.kwSpec)+'」,'+kwNone+'/'+R.length+' 週未填寫。</li>'+
+   '<li><b>欄位長度長了一個量級。</b>'+
+     LEN.map(function(o){return esc(o.nm)+' '+o.v.min+'→'+o.v.max+' 字';}).join("、")+
+     '。同一個欄位在不同週裝的東西已經不是同一種粒度。</li>'+
+ '</ul></div></div>'+
+ '<p class="mk-note">這些不是站台的錯誤,是這份週報系列的現況。'+
+ '<b>寫在這裡是因為它會改變讀者對這十五篇之間可比性的判斷</b>——'+
+ '四情境的折線可以跨週比,信心度與關鍵字不行。</p>'+
+
+ IA.head("十五篇","點任一列進入該週")+
+ '<div class="dcl-table-scroll"><table class="mk-t">'+
+ '<thead><tr><th>週</th><th>期間</th><th>主題</th><th>驗證結果</th><th>風險</th>'+
+ SCEN.map(function(n){return '<th>'+esc(n)+'</th>';}).join("")+'<th>總和</th></tr></thead><tbody>'+
+ R.map(function(r){
+   var s=K.sum(r);
+   return '<tr class="is-link" data-w="'+r.w+'">'+
+     '<td><span class="mk-id">第 '+r.w+' 週</span></td>'+
+     '<td style="white-space:nowrap;color:var(--muted)">'+esc(r.s)+'<br>'+esc(r.e)+'</td>'+
+     '<td class="mk-stmt">'+esc(K.topic(r))+'</td>'+
+     '<td><span class="mk-state is-'+(r.vr==="部分符合"?"resolved":"open")+'">'+esc(r.vr)+'</span></td>'+
+     '<td class="mk-num">'+r.rk+'</td>'+
+     r.sc.map(function(v,i){
+       return '<td class="mk-num">'+(v===null
+         ? '<span class="dcl-empty">未列出</span>'
+         : '<span style="color:'+C[i]+'">'+v+'%</span>')+'</td>';}).join("")+
+     '<td class="mk-num">'+K.round1(s)+'%'+
+       (s===100?'':'<span class="mk-delta is-up">+'+K.round1(s-100)+'</span>')+'</td></tr>';
+ }).join("")+
+ '</tbody></table></div>'+
+ '<p class="mk-note"><b>「總和」這一欄不是原文有的數字</b>,是本站把四情境加起來得到的。'+
+ '列它是因為它一眼就能看出這四個數字在哪一週停止是一組分割。</p>';
+
+Array.prototype.forEach.call(main.querySelectorAll("tr[data-w]"),function(tr){
+  tr.addEventListener("click",function(){location.href=tr.dataset.w+"/";});});
+</script>
+</body>
+</html>
